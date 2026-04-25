@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import PageHeader from '@/components/PageHeader';
 
 describe('PageHeader', () => {
@@ -27,5 +27,29 @@ describe('PageHeader', () => {
 
     rerender(<PageHeader title="Customers" />);
     expect(screen.getByText('Customers')).toBeInTheDocument();
+  });
+
+  it('renders a back button when onBack prop is provided', () => {
+    const onBack = jest.fn();
+    render(<PageHeader title="Detail" onBack={onBack} />);
+    const backBtn = screen.getByRole('button');
+    expect(backBtn).toBeInTheDocument();
+  });
+
+  it('calls onBack when back button is clicked', () => {
+    const onBack = jest.fn();
+    render(<PageHeader title="Detail" onBack={onBack} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders subtitle when provided', () => {
+    render(<PageHeader title="Main" subtitle="Sub text" />);
+    expect(screen.getByText('Sub text')).toBeInTheDocument();
+  });
+
+  it('renders right slot when provided', () => {
+    render(<PageHeader title="Title" right={<span>Action</span>} />);
+    expect(screen.getByText('Action')).toBeInTheDocument();
   });
 });
