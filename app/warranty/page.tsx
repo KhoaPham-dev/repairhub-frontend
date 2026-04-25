@@ -20,6 +20,7 @@ interface WarrantyResult {
 interface ApiResponse { success: boolean; data: WarrantyResult[] }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001';
+const safeImagePath = (p: string) => p.replace(/\.\./g, '').replace(/^\/+/, '');
 
 const WARRANTY_BADGE: Record<string, string> = {
   ACTIVE: 'bg-[#E0F2E9] text-[#1D7F54]',
@@ -114,13 +115,13 @@ export default function WarrantyPage() {
                     {intakeImgs[0] && (
                       <div>
                         <p className="text-xs text-slate-400 mb-1">Trước sửa</p>
-                        <img src={`${API_BASE}/uploads/${intakeImgs[0].image_path}`} alt="before" className="w-full h-28 object-cover rounded-xl" />
+                        <img src={`${API_BASE}/uploads/${safeImagePath(intakeImgs[0].image_path)}`} alt="before" className="w-full h-28 object-cover rounded-xl" />
                       </div>
                     )}
                     {completionImgs[0] && (
                       <div>
                         <p className="text-xs text-slate-400 mb-1">Sau sửa</p>
-                        <img src={`${API_BASE}/uploads/${completionImgs[0].image_path}`} alt="after" className="w-full h-28 object-cover rounded-xl" />
+                        <img src={`${API_BASE}/uploads/${safeImagePath(completionImgs[0].image_path)}`} alt="after" className="w-full h-28 object-cover rounded-xl" />
                       </div>
                     )}
                   </div>

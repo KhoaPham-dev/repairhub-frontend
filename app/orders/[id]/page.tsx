@@ -77,6 +77,7 @@ export default function OrderDetailPage() {
 
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001';
+  const safeImagePath = (p: string) => p.replace(/\.\./g, '').replace(/^\/+/, '');
 
   return (
     <AuthGuard>
@@ -127,7 +128,7 @@ export default function OrderDetailPage() {
               <h2 className="text-[15px] font-bold text-slate-900 mb-3">Ảnh ({order.images.length})</h2>
               <div className="grid grid-cols-3 gap-2">
                 {order.images.map((img) => (
-                  <img key={img.id} src={`${API_BASE}/uploads/${img.image_path}`}
+                  <img key={img.id} src={`${API_BASE}/uploads/${safeImagePath(img.image_path)}`}
                     alt={img.image_type} className="w-full h-24 object-cover rounded-xl" />
                 ))}
               </div>
