@@ -2,8 +2,10 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { Plus, Upload } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
+import SegmentedControl from '@/components/SegmentedControl';
 import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
@@ -32,6 +34,7 @@ interface ProductRow {
   warranty_period_months: number;
   warranty_months_custom: string;
   warranty_months_mode: 'preset' | 'custom';
+  images: File[];
 }
 
 function emptyProduct(): ProductRow {
@@ -39,6 +42,7 @@ function emptyProduct(): ProductRow {
     product_type: 'SPEAKER', device_name: '', serial_imei: '',
     accessories: '', fault_description: '', quotation: '',
     warranty_period_months: 3, warranty_months_mode: 'preset', warranty_months_custom: '',
+    images: [],
   };
 }
 
@@ -51,7 +55,6 @@ export default function NewOrderPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [newCustomer, setNewCustomer] = useState({ phone: '', name: '', address: '', type: 'RETAIL' });
   const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
-  const [images, setImages] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -84,7 +87,7 @@ export default function NewOrderPage() {
     setSuggestions([]);
   }
 
-  function updateProduct(idx: number, field: keyof ProductRow, value: string | number) {
+  function updateProduct(idx: number, field: keyof ProductRow, value: string | number | File[]) {
     setProducts((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
   }
 
@@ -185,9 +188,11 @@ export default function NewOrderPage() {
         firstOrderId = bulkRes.data[0].id;
       }
 
-      if (images.length > 0) {
+      // Upload images for each product
+      const allImages = products.flatMap((p) => p.images);
+      if (allImages.length > 0) {
         const fd = new FormData();
-        images.forEach((img) => fd.append('images', img));
+        allImages.forEach((img) => fd.append('images', img));
         fd.append('image_type', 'INTAKE');
         const token = localStorage.getItem('token');
         await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/orders/${firstOrderId}/images`, {
@@ -210,10 +215,30 @@ export default function NewOrderPage() {
   return (
     <AuthGuard>
       <div className="pb-24 min-h-screen bg-[#F8F9FB]">
-        <PageHeader title="Tạo đơn mới" onBack={() => router.back()} />
+        <PageHeader title="Tạo đơn mới" subtitle="Tạo đơn sửa chữa" onBack={() => router.back()} />
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
 
-          {/* Customer */}
+          {/* Branch */}
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="font-bold text-slate-900 text-[15px] mb-3">Nơi nhập hàng</h2>
+            <SegmentedControl
+              tabs={branches.map((b) => ({ label: b.name, value: b.id }))}
+              active={branchId}
+              onChange={setBranchId}
+            />
+          </div>
+
+          {/* Customer type */}
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="font-bold text-slate-900 text-[15px] mb-3">Loại khách hàng</h2>
+            <SegmentedControl
+              tabs={[{ label: 'Khách lẻ', value: 'RETAIL' }, { label: 'Đối tác', value: 'PARTNER' }]}
+              active={newCustomer.type}
+              onChange={(v) => setNewCustomer((p) => ({ ...p, type: v }))}
+            />
+          </div>
+
+          {/* Customer info */}
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <h2 className="font-bold text-slate-900 text-[15px] mb-4">Thông tin khách hàng</h2>
             <div className="relative">
@@ -244,15 +269,6 @@ export default function NewOrderPage() {
                 <input value={newCustomer.address} onChange={(e) => setNewCustomer((p) => ({ ...p, address: e.target.value }))}
                   placeholder="Địa chỉ"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-                <div className="flex gap-2">
-                  {[{ v: 'RETAIL', l: 'Khách lẻ' }, { v: 'PARTNER', l: 'Đối tác' }].map(({ v, l }) => (
-                    <button key={v} type="button"
-                      onClick={() => setNewCustomer((p) => ({ ...p, type: v }))}
-                      className={`flex-1 py-2 rounded-xl text-sm font-medium border ${newCustomer.type === v ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
             {selectedCustomer && (
@@ -265,26 +281,12 @@ export default function NewOrderPage() {
             )}
           </div>
 
-          {/* Branch */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <h2 className="font-bold text-slate-900 text-[15px] mb-4">Chi nhánh</h2>
-            <div className="flex gap-2 flex-wrap">
-              {branches.map((b) => (
-                <button key={b.id} type="button"
-                  onClick={() => setBranchId(b.id)}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${branchId === b.id ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                  {b.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Products */}
           {products.map((product, idx) => (
             <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
               <div className="flex justify-between items-center">
                 <h2 className="font-bold text-slate-900 text-[15px]">
-                  {products.length > 1 ? `Thiết bị ${idx + 1}` : 'Thiết bị'}
+                  {products.length > 1 ? `Sản phẩm ${idx + 1}` : 'Sản phẩm'}
                 </h2>
                 {products.length > 1 && (
                   <button type="button" onClick={() => removeProduct(idx)}
@@ -292,16 +294,12 @@ export default function NewOrderPage() {
                 )}
               </div>
 
-              {/* Product type buttons */}
-              <div className="flex gap-2 flex-wrap">
-                {PRODUCT_TYPES.map((pt) => (
-                  <button key={pt.value} type="button"
-                    onClick={() => updateProduct(idx, 'product_type', pt.value)}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${product.product_type === pt.value ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                    {pt.label}
-                  </button>
-                ))}
-              </div>
+              {/* Product type segmented control */}
+              <SegmentedControl
+                tabs={PRODUCT_TYPES.map((pt) => ({ label: pt.label, value: pt.value }))}
+                active={product.product_type}
+                onChange={(v) => updateProduct(idx, 'product_type', v)}
+              />
 
               {product.product_type !== 'BAO_HANH' && (
                 <>
@@ -344,6 +342,18 @@ export default function NewOrderPage() {
                         placeholder="Số tháng" min="1"
                         className="mt-2 w-32 px-4 py-2 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
                     )}
+                  </div>
+
+                  {/* Images upload inside product card */}
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
+                    <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
+                      <Upload size={20} className="mb-2" />
+                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh` : 'Chọn hình ảnh'}</span>
+                      <input type="file" accept="image/*" multiple capture="environment"
+                        onChange={(e) => updateProduct(idx, 'images', Array.from(e.target.files ?? []))}
+                        className="hidden" />
+                    </label>
                   </div>
                 </>
               )}
@@ -406,19 +416,10 @@ export default function NewOrderPage() {
           {/* Add product button */}
           {!isBaoHanhMode && (
             <button type="button" onClick={addProduct}
-              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium">
-              + Thêm thiết bị
+              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
+              <Plus size={18} /> Thêm sản phẩm
             </button>
           )}
-
-          {/* Images */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <h2 className="font-bold text-slate-900 text-[15px] mb-3">Ảnh tiếp nhận</h2>
-            <input type="file" accept="image/*" multiple capture="environment"
-              onChange={(e) => setImages(Array.from(e.target.files ?? []))}
-              className="w-full text-sm text-slate-600" />
-            {images.length > 0 && <p className="text-sm text-[#004EAB] mt-2">Đã chọn {images.length} ảnh</p>}
-          </div>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
