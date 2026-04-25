@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import BottomNav from '@/components/BottomNav';
 
-// Mock next/link
+// Mock next/link — must handle nested children (NavItem renders Link wrapping a div+span)
 jest.mock('next/link', () => {
   return function MockLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
     return <a href={href} className={className}>{children}</a>;
@@ -20,14 +20,22 @@ describe('BottomNav', () => {
     jest.clearAllMocks();
   });
 
-  it('renders all nav items', () => {
+  it('renders the four nav tab labels', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
     expect(screen.getByText('Tổng quan')).toBeInTheDocument();
     expect(screen.getByText('Đơn hàng')).toBeInTheDocument();
     expect(screen.getByText('Khách hàng')).toBeInTheDocument();
-    expect(screen.getByText('Bảo hành')).toBeInTheDocument();
-    expect(screen.getByText('Cài đặt')).toBeInTheDocument();
+    expect(screen.getByText('Nhân viên')).toBeInTheDocument();
+  });
+
+  it('renders center FAB link to /orders/new', () => {
+    mockUsePathname.mockReturnValue('/');
+    render(<BottomNav />);
+    const fabLink = screen.getByRole('link', { name: '' });
+    // FAB is an <a href="/orders/new"> with no visible text, only an icon
+    const newOrderLinks = screen.getAllByRole('link').filter((l) => l.getAttribute('href') === '/orders/new');
+    expect(newOrderLinks.length).toBeGreaterThan(0);
   });
 
   it('returns null on /login route', () => {
@@ -36,42 +44,53 @@ describe('BottomNav', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('highlights the active root route', () => {
+  it('returns null on /orders/new route', () => {
+    mockUsePathname.mockReturnValue('/orders/new');
+    const { container } = render(<BottomNav />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('returns null on /orders/123 (sub-route)', () => {
+    mockUsePathname.mockReturnValue('/orders/123');
+    const { container } = render(<BottomNav />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders on /orders (exact list page)', () => {
+    mockUsePathname.mockReturnValue('/orders');
+    const { container } = render(<BottomNav />);
+    expect(container.firstChild).not.toBeNull();
+  });
+
+  it('applies active purple color to home tab on /', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
-    // The "/" link should have the active color class
-    const homeLink = screen.getByText('Tổng quan').closest('a');
-    expect(homeLink?.className).toContain('text-[#1565C0]');
+    const span = screen.getByText('Tổng quan');
+    expect(span.className).toContain('text-[#715DF2]');
   });
 
-  it('highlights orders tab when on /orders', () => {
+  it('applies active purple color to orders tab on /orders', () => {
     mockUsePathname.mockReturnValue('/orders');
     render(<BottomNav />);
-    const ordersLink = screen.getByText('Đơn hàng').closest('a');
-    expect(ordersLink?.className).toContain('text-[#1565C0]');
+    const span = screen.getByText('Đơn hàng');
+    expect(span.className).toContain('text-[#715DF2]');
   });
 
-  it('highlights orders tab when on a sub-route of /orders', () => {
-    mockUsePathname.mockReturnValue('/orders/123');
-    render(<BottomNav />);
-    const ordersLink = screen.getByText('Đơn hàng').closest('a');
-    expect(ordersLink?.className).toContain('text-[#1565C0]');
-  });
-
-  it('marks non-active tabs as gray', () => {
+  it('applies inactive slate color to non-active tab', () => {
     mockUsePathname.mockReturnValue('/orders');
     render(<BottomNav />);
-    const customersLink = screen.getByText('Khách hàng').closest('a');
-    expect(customersLink?.className).toContain('text-gray-500');
+    const span = screen.getByText('Tổng quan');
+    expect(span.className).toContain('text-slate-400');
   });
 
   it('renders nav links with correct hrefs', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
-    expect(screen.getByText('Tổng quan').closest('a')).toHaveAttribute('href', '/');
-    expect(screen.getByText('Đơn hàng').closest('a')).toHaveAttribute('href', '/orders');
-    expect(screen.getByText('Khách hàng').closest('a')).toHaveAttribute('href', '/customers');
-    expect(screen.getByText('Bảo hành').closest('a')).toHaveAttribute('href', '/warranty');
-    expect(screen.getByText('Cài đặt').closest('a')).toHaveAttribute('href', '/settings');
+    const links = screen.getAllByRole('link');
+    const hrefs = links.map((l) => l.getAttribute('href'));
+    expect(hrefs).toContain('/');
+    expect(hrefs).toContain('/orders');
+    expect(hrefs).toContain('/customers');
+    expect(hrefs).toContain('/staff');
   });
 });

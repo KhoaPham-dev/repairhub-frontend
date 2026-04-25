@@ -1,30 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import PageHeader from '@/components/PageHeader';
-import Card from '@/components/Card';
+import { TrendingUp } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
+import SegmentedControl from '@/components/SegmentedControl';
 import { api } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 
 interface StatusCounts { [key: string]: number }
 
-const STATUS_LABELS: Record<string, string> = {
-  TIEP_NHAN: 'Tiếp nhận',
-  DANG_KIEM_TRA: 'Đang kiểm tra',
-  BAO_GIA: 'Báo giá',
-  CHO_LINH_KIEN: 'Chờ linh kiện',
-  DANG_SUA_CHUA: 'Đang sửa chữa',
-  KIEM_TRA_LAI: 'Kiểm tra lại',
-  SUA_XONG: 'Sửa xong',
-  DA_GIAO: 'Đã giao',
-  HUY_TRA_MAY: 'Huỷ/Trả máy',
-};
+const PERIOD_TABS = [
+  { label: 'Hôm nay', value: 'today' },
+  { label: 'Tuần này', value: 'week' },
+  { label: 'Tháng này', value: 'month' },
+];
+
+const BAR_HEIGHTS = [40, 70, 45, 90, 65, 85, 100];
+const BAR_DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [counts, setCounts] = useState<StatusCounts>({});
+  const [period, setPeriod] = useState('today');
   const user = getUser();
 
   useEffect(() => {
@@ -33,48 +29,61 @@ export default function DashboardPage() {
       .catch(() => null);
   }, []);
 
-  const active = Object.entries(counts).filter(([s]) => !['DA_GIAO', 'HUY_TRA_MAY'].includes(s));
-  const total = active.reduce((s, [, c]) => s + c, 0);
+  const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
+  const activeTotal = Object.entries(counts)
+    .filter(([s]) => !TERMINAL.includes(s))
+    .reduce((sum, [, c]) => sum + c, 0);
+  const delivered = counts['DA_GIAO'] ?? 0;
+  const cancelled = counts['HUY_TRA_MAY'] ?? 0;
+  const newToday = counts['TIEP_NHAN'] ?? 0;
 
   return (
     <AuthGuard>
-      <div>
-        <PageHeader title="Tổng quan" />
-        <div className="p-4 space-y-4">
-          <p className="text-gray-600 text-sm">Xin chào, <span className="font-semibold">{user?.full_name}</span></p>
+      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+        <div className="px-4 pt-12 pb-4 bg-[#F8F9FB] sticky top-0 z-10 w-full mb-2">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Tổng quan</h1>
+          <p className="text-sm text-slate-500 mb-4">Xin chào, <span className="font-semibold text-slate-700">{user?.full_name}</span></p>
+          <SegmentedControl tabs={PERIOD_TABS} active={period} onChange={setPeriod} />
+        </div>
 
+        <div className="px-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Card>
-              <div className="text-3xl font-bold text-[#1565C0]">{total}</div>
-              <div className="text-sm text-gray-500 mt-1">Đơn đang xử lý</div>
-            </Card>
-            <Card
-              className="cursor-pointer active:opacity-80"
-              onClick={() => router.push('/orders')}
-            >
-              <div className="text-3xl font-bold text-orange-500">{counts['CHO_LINH_KIEN'] ?? 0}</div>
-              <div className="text-sm text-gray-500 mt-1">Chờ linh kiện</div>
-            </Card>
-            <Card>
-              <div className="text-3xl font-bold text-green-600">{counts['DA_GIAO'] ?? 0}</div>
-              <div className="text-sm text-gray-500 mt-1">Đã giao</div>
-            </Card>
-            <Card>
-              <div className="text-3xl font-bold text-red-500">{counts['HUY_TRA_MAY'] ?? 0}</div>
-              <div className="text-sm text-gray-500 mt-1">Huỷ/Trả máy</div>
-            </Card>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+              <p className="text-sm text-slate-500 mb-2 font-medium">Đang xử lý</p>
+              <p className="text-2xl font-bold text-[#004EAB]">{activeTotal}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+              <p className="text-sm text-slate-500 mb-2 font-medium">Đơn hoàn tất</p>
+              <p className="text-2xl font-bold text-[#1D7F54]">{delivered}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+              <p className="text-sm text-slate-500 mb-2 font-medium">Tiếp nhận</p>
+              <p className="text-2xl font-bold text-slate-900">{newToday}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+              <p className="text-sm text-slate-500 mb-2 font-medium">Đơn huỷ</p>
+              <p className="text-2xl font-bold text-red-500">{cancelled}</p>
+            </div>
           </div>
 
-          <div>
-            <h2 className="text-sm font-semibold text-gray-600 mb-2">Theo trạng thái</h2>
-            <div className="space-y-2">
-              {active.map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm">
-                  <span className="text-sm text-gray-700">{STATUS_LABELS[status] ?? status}</span>
-                  <span className="font-bold text-[#1565C0]">{count}</span>
-                </div>
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-[15px] font-bold text-slate-900">Biểu đồ doanh thu</h2>
+              <div className="flex items-center text-xs text-[#1D7F54] font-medium gap-1">
+                <TrendingUp size={12} /> +12%
+              </div>
+            </div>
+            <div className="flex items-end justify-between h-32 gap-2">
+              {BAR_HEIGHTS.map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
+                  style={{ height: `${h}%` }}
+                />
               ))}
-              {active.length === 0 && <p className="text-gray-400 text-sm text-center py-4">Chưa có đơn hàng nào</p>}
+            </div>
+            <div className="flex justify-between mt-3 text-xs text-slate-400">
+              {BAR_DAYS.map((d) => <span key={d}>{d}</span>)}
             </div>
           </div>
         </div>

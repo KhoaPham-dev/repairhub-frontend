@@ -106,36 +106,36 @@ describe('NewOrderPage', () => {
     });
   });
 
-  it('adds a second product row on + Thêm thiết bị click', async () => {
+  it('adds a second product row on Thêm sản phẩm click', async () => {
     render(<NewOrderPage />);
-    await waitFor(() => screen.getByText('+ Thêm thiết bị'));
-    fireEvent.click(screen.getByText('+ Thêm thiết bị'));
+    await waitFor(() => screen.getByText('Thêm sản phẩm'));
+    fireEvent.click(screen.getByText('Thêm sản phẩm'));
     await waitFor(() => {
-      expect(screen.getByText('Thiết bị 1')).toBeInTheDocument();
-      expect(screen.getByText('Thiết bị 2')).toBeInTheDocument();
+      expect(screen.getByText('Sản phẩm 1')).toBeInTheDocument();
+      expect(screen.getByText('Sản phẩm 2')).toBeInTheDocument();
     });
   });
 
   it('removes a product row when Xoá is clicked', async () => {
     render(<NewOrderPage />);
-    await waitFor(() => screen.getByText('+ Thêm thiết bị'));
-    fireEvent.click(screen.getByText('+ Thêm thiết bị'));
+    await waitFor(() => screen.getByText('Thêm sản phẩm'));
+    fireEvent.click(screen.getByText('Thêm sản phẩm'));
     await waitFor(() => screen.getAllByText('Xoá'));
     const removeButtons = screen.getAllByText('Xoá');
     fireEvent.click(removeButtons[0]);
     await waitFor(() => {
-      expect(screen.queryByText('Thiết bị 2')).not.toBeInTheDocument();
+      expect(screen.queryByText('Sản phẩm 2')).not.toBeInTheDocument();
     });
   });
 
-  it('shows + Thêm thiết bị only when not in Bảo Hành mode', async () => {
+  it('shows Thêm sản phẩm only when not in Bảo Hành mode', async () => {
     render(<NewOrderPage />);
     await waitFor(() => {
-      expect(screen.getByText('+ Thêm thiết bị')).toBeInTheDocument();
+      expect(screen.getByText('Thêm sản phẩm')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText('Bảo Hành'));
     await waitFor(() => {
-      expect(screen.queryByText('+ Thêm thiết bị')).not.toBeInTheDocument();
+      expect(screen.queryByText('Thêm sản phẩm')).not.toBeInTheDocument();
     });
   });
 
@@ -190,13 +190,13 @@ describe('NewOrderPage', () => {
       .mockResolvedValueOnce({ data: [{ id: 'ord1' }, { id: 'ord2' }] }); // bulk create
 
     render(<NewOrderPage />);
-    await waitFor(() => screen.getByText('+ Thêm thiết bị'));
+    await waitFor(() => screen.getByText('Thêm sản phẩm'));
 
     fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
     fireEvent.change(screen.getByPlaceholderText('Tên khách hàng *'), { target: { value: 'Nguyễn Văn A' } });
 
-    fireEvent.click(screen.getByText('+ Thêm thiết bị'));
-    await waitFor(() => screen.getByText('Thiết bị 2'));
+    fireEvent.click(screen.getByText('Thêm sản phẩm'));
+    await waitFor(() => screen.getByText('Sản phẩm 2'));
 
     const deviceInputs = screen.getAllByPlaceholderText('Tên thiết bị *');
     const faultInputs = screen.getAllByPlaceholderText('Mô tả lỗi *');
