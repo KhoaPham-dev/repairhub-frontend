@@ -8,39 +8,72 @@ import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
+interface WarrantyResult {
+  id: string; order_code: string; device_name: string; warranty_end_date: string | null;
+  warranty_status: string; customer_phone: string; customer_name: string;
+}
 interface ApiResponse<T> { success: boolean; data: T }
 
 const PRODUCT_TYPES = [
   { value: 'SPEAKER', label: 'Loa' },
   { value: 'HEADPHONE', label: 'Tai nghe' },
-  { value: 'OTHER', label: 'Khác' },
+  { value: 'BAO_HANH', label: 'Bảo Hành' },
 ];
+
+const WARRANTY_MONTHS = [3, 6, 12];
+
+interface ProductRow {
+  product_type: string;
+  device_name: string;
+  serial_imei: string;
+  accessories: string;
+  fault_description: string;
+  quotation: string;
+  warranty_period_months: number;
+  warranty_months_custom: string;
+  warranty_months_mode: 'preset' | 'custom';
+}
+
+function emptyProduct(): ProductRow {
+  return {
+    product_type: 'SPEAKER', device_name: '', serial_imei: '',
+    accessories: '', fault_description: '', quotation: '',
+    warranty_period_months: 3, warranty_months_mode: 'preset', warranty_months_custom: '',
+  };
+}
 
 export default function NewOrderPage() {
   const router = useRouter();
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState('');
   const [customerQuery, setCustomerQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [form, setForm] = useState({
-    branch_id: '', product_type: 'SPEAKER', device_name: '',
-    serial_imei: '', accessories: '', fault_description: '', quotation: '',
-  });
   const [newCustomer, setNewCustomer] = useState({ phone: '', name: '', address: '', type: 'RETAIL' });
+  const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
   const [images, setImages] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Bảo Hành flow
+  const [bhPhone, setBhPhone] = useState('');
+  const [bhWarranties, setBhWarranties] = useState<WarrantyResult[]>([]);
+  const [bhSearching, setBhSearching] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
+  const [bhBranchId, setBhBranchId] = useState('');
+
   useEffect(() => {
-    api.get<ApiResponse<Branch[]>>('/branches').then((r) => setBranches(r.data)).catch(() => null);
+    api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
+      setBranches(r.data);
+      if (r.data.length > 0) setBranchId(r.data[0].id);
+    }).catch(() => null);
   }, []);
 
   useEffect(() => {
     if (customerQuery.length < 2) { setSuggestions([]); return; }
     const t = setTimeout(() => {
       api.get<ApiResponse<Customer[]>>(`/customers/search?q=${encodeURIComponent(customerQuery)}`)
-        .then((r) => setSuggestions(r.data))
-        .catch(() => null);
+        .then((r) => setSuggestions(r.data)).catch(() => null);
     }, 300);
     return () => clearTimeout(t);
   }, [customerQuery]);
@@ -51,13 +84,69 @@ export default function NewOrderPage() {
     setSuggestions([]);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  function updateProduct(idx: number, field: keyof ProductRow, value: string | number) {
+    setProducts((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  }
+
+  function addProduct() {
+    setProducts((prev) => [...prev, emptyProduct()]);
+  }
+
+  function removeProduct(idx: number) {
+    setProducts((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function searchBhWarranties() {
+    if (!bhPhone.trim()) return;
+    setBhSearching(true);
+    setBhWarranties([]);
+    setSelectedWarranty(null);
+    try {
+      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(bhPhone)}`);
+      setBhWarranties(r.data);
+    } catch {
+      // ignore
+    } finally {
+      setBhSearching(false);
+    }
+  }
+
+  async function handleBhSubmit() {
+    if (!selectedWarranty || !bhBranchId) {
+      setError('Vui lòng chọn bảo hành và chi nhánh');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
-      let customerId = selectedCustomer?.id;
+      const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
+        source_order_id: selectedWarranty.id,
+        branch_id: bhBranchId,
+      });
+      router.push(`/orders/${r.data.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
+  }
 
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+
+    // If any product is BAO_HANH type, redirect to BH flow
+    const hasBaoHanh = products.some((p) => p.product_type === 'BAO_HANH');
+    if (hasBaoHanh) {
+      setError('Vui lòng sử dụng luồng Bảo Hành bên dưới');
+      return;
+    }
+
+    if (!branchId) { setError('Vui lòng chọn chi nhánh'); return; }
+
+    setLoading(true);
+    try {
+      let customerId = selectedCustomer?.id;
       if (!customerId) {
         if (!newCustomer.phone || !newCustomer.name) {
           setError('Vui lòng nhập SĐT và tên khách hàng'); setLoading(false); return;
@@ -66,30 +155,49 @@ export default function NewOrderPage() {
         customerId = cr.data.id;
       }
 
-      const or = await api.post<ApiResponse<{ id: string }>>('/orders', {
-        customer_id: customerId,
-        branch_id: form.branch_id,
-        product_type: form.product_type,
-        device_name: form.device_name,
-        serial_imei: form.serial_imei || undefined,
-        accessories: form.accessories || undefined,
-        fault_description: form.fault_description,
-        quotation: Number(form.quotation) || 0,
-      });
+      const productList = products.map((p) => ({
+        product_type: p.product_type,
+        device_name: p.device_name,
+        serial_imei: p.serial_imei || undefined,
+        accessories: p.accessories || undefined,
+        fault_description: p.fault_description,
+        quotation: Number(p.quotation) || 0,
+        warranty_period_months: p.warranty_months_mode === 'custom'
+          ? (Number(p.warranty_months_custom) || 3)
+          : p.warranty_period_months,
+      }));
+
+      let firstOrderId: string;
+
+      if (productList.length === 1) {
+        const or = await api.post<ApiResponse<{ id: string }>>('/orders', {
+          customer_id: customerId,
+          branch_id: branchId,
+          ...productList[0],
+        });
+        firstOrderId = or.data.id;
+      } else {
+        const bulkRes = await api.post<ApiResponse<Array<{ id: string }>>>('/orders/bulk', {
+          customer_id: customerId,
+          branch_id: branchId,
+          products: productList,
+        });
+        firstOrderId = bulkRes.data[0].id;
+      }
 
       if (images.length > 0) {
         const fd = new FormData();
         images.forEach((img) => fd.append('images', img));
         fd.append('image_type', 'INTAKE');
         const token = localStorage.getItem('token');
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/orders/${or.data.id}/images`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/orders/${firstOrderId}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
         });
       }
 
-      router.push(`/orders/${or.data.id}`);
+      router.push(`/orders/${firstOrderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
@@ -97,29 +205,31 @@ export default function NewOrderPage() {
     }
   }
 
+  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
+
   return (
     <AuthGuard>
-      <div>
-        <PageHeader title="Tạo đơn mới" />
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 pb-24">
+      <div className="pb-24 min-h-screen bg-[#F8F9FB]">
+        <PageHeader title="Tạo đơn mới" onBack={() => router.back()} />
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
 
           {/* Customer */}
-          <div className="bg-white rounded-xl p-4 shadow-sm">
-            <h2 className="font-semibold text-gray-800 mb-3">Thông tin khách hàng</h2>
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="font-bold text-slate-900 text-[15px] mb-4">Thông tin khách hàng</h2>
             <div className="relative">
               <input
                 type="tel"
                 value={customerQuery}
                 onChange={(e) => { setCustomerQuery(e.target.value); setSelectedCustomer(null); setNewCustomer((p) => ({ ...p, phone: e.target.value })); }}
                 placeholder="Số điện thoại *"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]"
                 required
               />
               {suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-xl z-10 mt-1 border border-gray-100">
+                <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-xl z-10 mt-1 border border-slate-100">
                   {suggestions.map((s) => (
                     <button key={s.id} type="button" onClick={() => selectCustomer(s)}
-                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0">
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0">
                       <span className="font-medium">{s.phone}</span> — {s.name}
                     </button>
                   ))}
@@ -129,66 +239,195 @@ export default function NewOrderPage() {
             {!selectedCustomer && (
               <div className="mt-3 space-y-2">
                 <input value={newCustomer.name} onChange={(e) => setNewCustomer((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Tên khách hàng *" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
+                  placeholder="Tên khách hàng *"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
                 <input value={newCustomer.address} onChange={(e) => setNewCustomer((p) => ({ ...p, address: e.target.value }))}
-                  placeholder="Địa chỉ" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-                <select value={newCustomer.type} onChange={(e) => setNewCustomer((p) => ({ ...p, type: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]">
-                  <option value="RETAIL">Khách lẻ</option>
-                  <option value="PARTNER">Đối tác</option>
-                </select>
+                  placeholder="Địa chỉ"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                <div className="flex gap-2">
+                  {[{ v: 'RETAIL', l: 'Khách lẻ' }, { v: 'PARTNER', l: 'Đối tác' }].map(({ v, l }) => (
+                    <button key={v} type="button"
+                      onClick={() => setNewCustomer((p) => ({ ...p, type: v }))}
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium border ${newCustomer.type === v ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {selectedCustomer && (
               <div className="mt-2 p-3 bg-blue-50 rounded-xl text-sm">
-                <p className="font-medium text-[#1565C0]">{selectedCustomer.name}</p>
-                <p className="text-gray-600">{selectedCustomer.type === 'RETAIL' ? 'Khách lẻ' : 'Đối tác'}</p>
-                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerQuery(''); }} className="text-xs text-red-500 mt-1">Xoá chọn</button>
+                <p className="font-medium text-[#004EAB]">{selectedCustomer.name}</p>
+                <p className="text-slate-600 text-xs">{selectedCustomer.type === 'RETAIL' ? 'Khách lẻ' : 'Đối tác'}</p>
+                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerQuery(''); }}
+                  className="text-xs text-red-500 mt-1">Xoá chọn</button>
               </div>
             )}
           </div>
 
-          {/* Branch & Product */}
-          <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
-            <h2 className="font-semibold text-gray-800">Chi nhánh & Thiết bị</h2>
-            <select value={form.branch_id} onChange={(e) => setForm((p) => ({ ...p, branch_id: e.target.value }))}
-              required className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]">
-              <option value="">Chọn chi nhánh *</option>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-            <select value={form.product_type} onChange={(e) => setForm((p) => ({ ...p, product_type: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]">
-              {PRODUCT_TYPES.map((pt) => <option key={pt.value} value={pt.value}>{pt.label}</option>)}
-            </select>
-            <input value={form.device_name} onChange={(e) => setForm((p) => ({ ...p, device_name: e.target.value }))}
-              placeholder="Tên thiết bị *" required className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-            <input value={form.serial_imei} onChange={(e) => setForm((p) => ({ ...p, serial_imei: e.target.value }))}
-              placeholder="Serial / IMEI" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-            <input value={form.accessories} onChange={(e) => setForm((p) => ({ ...p, accessories: e.target.value }))}
-              placeholder="Phụ kiện kèm theo" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-            <textarea value={form.fault_description} onChange={(e) => setForm((p) => ({ ...p, fault_description: e.target.value }))}
-              placeholder="Mô tả lỗi *" required rows={3}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0] resize-none" />
-            <input type="number" value={form.quotation} onChange={(e) => setForm((p) => ({ ...p, quotation: e.target.value }))}
-              placeholder="Báo giá (VNĐ) *" required min="0"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
+          {/* Branch */}
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="font-bold text-slate-900 text-[15px] mb-4">Chi nhánh</h2>
+            <div className="flex gap-2 flex-wrap">
+              {branches.map((b) => (
+                <button key={b.id} type="button"
+                  onClick={() => setBranchId(b.id)}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${branchId === b.id ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                  {b.name}
+                </button>
+              ))}
+            </div>
           </div>
 
+          {/* Products */}
+          {products.map((product, idx) => (
+            <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
+              <div className="flex justify-between items-center">
+                <h2 className="font-bold text-slate-900 text-[15px]">
+                  {products.length > 1 ? `Thiết bị ${idx + 1}` : 'Thiết bị'}
+                </h2>
+                {products.length > 1 && (
+                  <button type="button" onClick={() => removeProduct(idx)}
+                    className="text-xs text-red-500 font-medium">Xoá</button>
+                )}
+              </div>
+
+              {/* Product type buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {PRODUCT_TYPES.map((pt) => (
+                  <button key={pt.value} type="button"
+                    onClick={() => updateProduct(idx, 'product_type', pt.value)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${product.product_type === pt.value ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                    {pt.label}
+                  </button>
+                ))}
+              </div>
+
+              {product.product_type !== 'BAO_HANH' && (
+                <>
+                  <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
+                    placeholder="Tên thiết bị *" required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  <input value={product.serial_imei} onChange={(e) => updateProduct(idx, 'serial_imei', e.target.value)}
+                    placeholder="Serial / IMEI"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  <input value={product.accessories} onChange={(e) => updateProduct(idx, 'accessories', e.target.value)}
+                    placeholder="Phụ kiện kèm theo"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
+                    placeholder="Mô tả lỗi *" required rows={3}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
+                  <input type="number" value={product.quotation} onChange={(e) => updateProduct(idx, 'quotation', e.target.value)}
+                    placeholder="Báo giá (VNĐ) *" required min="0"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+
+                  {/* Warranty package */}
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Bảo hành</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {WARRANTY_MONTHS.map((m) => (
+                        <button key={m} type="button"
+                          onClick={() => { updateProduct(idx, 'warranty_period_months', m); updateProduct(idx, 'warranty_months_mode', 'preset'); }}
+                          className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'preset' && product.warranty_period_months === m ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                          {m} tháng
+                        </button>
+                      ))}
+                      <button type="button"
+                        onClick={() => updateProduct(idx, 'warranty_months_mode', 'custom')}
+                        className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'custom' ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                        Khác
+                      </button>
+                    </div>
+                    {product.warranty_months_mode === 'custom' && (
+                      <input type="number" value={product.warranty_months_custom}
+                        onChange={(e) => updateProduct(idx, 'warranty_months_custom', e.target.value)}
+                        placeholder="Số tháng" min="1"
+                        className="mt-2 w-32 px-4 py-2 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+
+          {/* Bảo Hành flow */}
+          {isBaoHanhMode && (
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
+              <h2 className="font-bold text-slate-900 text-[15px]">Tra cứu bảo hành</h2>
+              <div className="flex gap-2">
+                <input type="tel" value={bhPhone} onChange={(e) => setBhPhone(e.target.value)}
+                  placeholder="Số điện thoại khách hàng"
+                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
+                <button type="button" onClick={searchBhWarranties} disabled={bhSearching}
+                  className="px-4 py-3 bg-[#004EAB] text-white rounded-xl text-sm font-semibold disabled:opacity-60">
+                  {bhSearching ? '...' : 'Tìm'}
+                </button>
+              </div>
+
+              {bhWarranties.length === 0 && bhPhone && !bhSearching && (
+                <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành</p>
+              )}
+
+              {bhWarranties.map((w) => (
+                <button key={w.id} type="button"
+                  onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
+                  className={`w-full text-left p-4 rounded-xl border text-sm ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
+                  <p className="font-semibold text-slate-900">{w.order_code}</p>
+                  <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
+                  {w.warranty_end_date && (
+                    <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                  )}
+                </button>
+              ))}
+
+              {selectedWarranty && (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Chi nhánh tiếp nhận</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {branches.map((b) => (
+                        <button key={b.id} type="button"
+                          onClick={() => setBhBranchId(b.id)}
+                          className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${bhBranchId === b.id ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                          {b.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="button" onClick={handleBhSubmit} disabled={loading || !bhBranchId}
+                    className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-sm disabled:opacity-60">
+                    {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add product button */}
+          {!isBaoHanhMode && (
+            <button type="button" onClick={addProduct}
+              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium">
+              + Thêm thiết bị
+            </button>
+          )}
+
           {/* Images */}
-          <div className="bg-white rounded-xl p-4 shadow-sm">
-            <h2 className="font-semibold text-gray-800 mb-3">Ảnh tiếp nhận</h2>
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="font-bold text-slate-900 text-[15px] mb-3">Ảnh tiếp nhận</h2>
             <input type="file" accept="image/*" multiple capture="environment"
               onChange={(e) => setImages(Array.from(e.target.files ?? []))}
-              className="w-full text-sm text-gray-600" />
-            {images.length > 0 && <p className="text-sm text-[#1565C0] mt-2">Đã chọn {images.length} ảnh</p>}
+              className="w-full text-sm text-slate-600" />
+            {images.length > 0 && <p className="text-sm text-[#004EAB] mt-2">Đã chọn {images.length} ảnh</p>}
           </div>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          <button type="submit" disabled={loading}
-            className="fixed bottom-20 left-4 right-4 bg-[#1565C0] text-white py-4 rounded-xl font-semibold text-base disabled:opacity-60 shadow-lg">
-            {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
-          </button>
+          {!isBaoHanhMode && (
+            <button type="submit" disabled={loading}
+              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
+            </button>
+          )}
         </form>
       </div>
     </AuthGuard>
