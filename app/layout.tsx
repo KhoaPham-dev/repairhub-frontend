@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body>
-        <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative overflow-hidden">
+        <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden">
           <main className="pb-20 min-h-screen bg-[#F8F9FB]">
             <PageTransition>{children}</PageTransition>
           </main>
