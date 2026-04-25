@@ -1,6 +1,10 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import PageHeader from '@/components/PageHeader';
+
+jest.mock('lucide-react', () => ({
+  ChevronLeft: () => <svg data-testid="icon-back" />,
+}));
 
 describe('PageHeader', () => {
   it('renders the title', () => {
@@ -14,18 +18,25 @@ describe('PageHeader', () => {
     expect(heading).toHaveTextContent('My Page');
   });
 
-  it('applies sticky header styling', () => {
-    const { container } = render(<PageHeader title="Settings" />);
-    const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.className).toContain('sticky');
-    expect(wrapper.className).toContain('top-0');
+  it('renders subtitle when provided', () => {
+    render(<PageHeader title="Orders" subtitle="10 items" />);
+    expect(screen.getByText('10 items')).toBeInTheDocument();
   });
 
-  it('renders different titles correctly', () => {
-    const { rerender } = render(<PageHeader title="Orders" />);
-    expect(screen.getByText('Orders')).toBeInTheDocument();
+  it('does not show back button when onBack not provided', () => {
+    render(<PageHeader title="Dashboard" />);
+    expect(screen.queryByTestId('icon-back')).toBeNull();
+  });
 
-    rerender(<PageHeader title="Customers" />);
-    expect(screen.getByText('Customers')).toBeInTheDocument();
+  it('shows back button when onBack is provided', () => {
+    render(<PageHeader title="Detail" onBack={() => {}} />);
+    expect(screen.getByTestId('icon-back')).toBeInTheDocument();
+  });
+
+  it('calls onBack when back button is clicked', () => {
+    const onBack = jest.fn();
+    render(<PageHeader title="Detail" onBack={onBack} />);
+    fireEvent.click(screen.getByTestId('icon-back').closest('button')!);
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

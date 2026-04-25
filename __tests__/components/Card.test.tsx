@@ -12,7 +12,7 @@ describe('Card', () => {
     const { container } = render(<Card>content</Card>);
     const div = container.firstChild as HTMLElement;
     expect(div.className).toContain('bg-white');
-    expect(div.className).toContain('rounded-xl');
+    expect(div.className).toContain('rounded-3xl');
     expect(div.className).toContain('shadow-sm');
     expect(div.className).toContain('p-4');
   });

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { Search, ChevronRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
-import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import { api } from '@/lib/api';
 
@@ -29,8 +29,11 @@ const STATUS_LABELS: Record<string, string> = {
   DA_GIAO: 'Đã giao', HUY_TRA_MAY: 'Huỷ/Trả máy',
 };
 
-const PRIORITY_COLORS = { LOW: 'bg-green-100 text-green-700', MEDIUM: 'bg-yellow-100 text-yellow-700', HIGH: 'bg-red-100 text-red-700' };
-const PRIORITY_LABELS = { LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' };
+const STATUS_BADGE: Record<string, string> = {
+  DA_GIAO: 'bg-[#E0F2E9] text-[#1D7F54]',
+  SUA_XONG: 'bg-[#E0F2E9] text-[#1D7F54]',
+  HUY_TRA_MAY: 'bg-red-50 text-red-600',
+};
 
 const FILTERS = [
   { key: '', label: 'Tất cả' },
@@ -76,84 +79,91 @@ export default function OrdersPage() {
     fetchOrders(search, status, next, true);
   }
 
+  function statusBadge(s: string) {
+    return STATUS_BADGE[s] ?? 'bg-[#EAEFFF] text-[#004EAB]';
+  }
+
   return (
     <AuthGuard>
-      <div>
-        <PageHeader title="Đơn hàng" />
-        <div className="p-4">
-          <div className="relative mb-3">
+      <div className="pb-24">
+        <div className="px-4 pt-12 pb-4 bg-[#F8F9FB] sticky top-0 z-10 w-full">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Đơn hàng</h1>
+              <p className="text-sm text-slate-500">{orders.length} đơn</p>
+            </div>
+          </div>
+
+          <div className="relative mb-4">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search size={18} className="text-slate-400" />
+            </div>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo SĐT, mã đơn, serial..."
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1565C0]"
+              className="block w-full pl-11 pr-4 py-3 bg-white rounded-2xl text-sm placeholder:text-slate-400 shadow-sm border border-slate-100 outline-none focus:border-[#004EAB] transition-colors"
+              placeholder="Tìm theo tên, SĐT, serial..."
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
             {FILTERS.map((f) => (
               <button
                 key={f.key}
                 onClick={() => setStatus(f.key)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   status === f.key
-                    ? 'bg-[#1565C0] text-white'
-                    : 'border border-gray-200 bg-white text-gray-600'
+                    ? 'bg-white shadow-sm text-slate-900'
+                    : 'text-slate-500'
                 }`}
               >
                 {f.label}{f.key && counts[f.key] ? ` (${counts[f.key]})` : ''}
               </button>
             ))}
           </div>
+        </div>
 
-          <div className="flex justify-end mb-3">
-            <button
-              onClick={() => router.push('/orders/new')}
-              className="bg-[#1565C0] text-white px-4 py-2 rounded-xl text-sm font-medium"
+        <div className="px-4 space-y-3">
+          {orders.length === 0 && (
+            <div className="text-center py-12 text-slate-400 text-sm">Chưa có đơn hàng nào</div>
+          )}
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              onClick={() => router.push(`/orders/${order.id}`)}
+              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 cursor-pointer transition-colors"
             >
-              + Tạo đơn mới
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  {order.order_code}{' '}
+                  <span className="font-normal text-slate-500">
+                    nhận ngày {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                  </span>
+                </h3>
+              </div>
+              <p className="text-sm text-slate-700 mb-1">{order.customer_name} · {order.customer_phone}</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-slate-600">{order.device_name}</p>
+                <ChevronRight size={18} className="text-slate-300" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${statusBadge(order.status)}`}>
+                  {STATUS_LABELS[order.status] ?? order.status}
+                </span>
+                {order.priority === 'HIGH' && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-600">
+                    Ưu tiên Cao
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+          {hasMore && orders.length > 0 && (
+            <button onClick={loadMore} className="w-full py-3 text-sm text-[#004EAB] font-medium">
+              Tải thêm
             </button>
-          </div>
-
-          <div className="space-y-3">
-            {orders.length === 0 && (
-              <Card className="text-center py-8 text-gray-400">
-                <div className="text-4xl mb-2">📋</div>
-                <div>Chưa có đơn hàng nào</div>
-              </Card>
-            )}
-            {orders.map((order) => (
-              <Card
-                key={order.id}
-                className="cursor-pointer active:opacity-80"
-                onClick={() => router.push(`/orders/${order.id}`)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm">{order.order_code}</p>
-                    <p className="text-sm text-gray-600 truncate">{order.customer_name} · {order.customer_phone}</p>
-                    <p className="text-xs text-gray-400 mt-1">{order.device_name}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                      {STATUS_LABELS[order.status] ?? order.status}
-                    </span>
-                    {order.priority && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${PRIORITY_COLORS[order.priority]}`}>
-                        {PRIORITY_LABELS[order.priority]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-            {hasMore && orders.length > 0 && (
-              <button onClick={loadMore} className="w-full py-3 text-sm text-[#1565C0] font-medium">
-                Tải thêm
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </AuthGuard>

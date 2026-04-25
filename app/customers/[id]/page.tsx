@@ -29,43 +29,59 @@ export default function CustomerDetailPage() {
     api.get<ApiResponse<CustomerDetail>>(`/customers/${id}`).then((r) => setCustomer(r.data)).catch(() => null);
   }, [id]);
 
-  if (!customer) return <AuthGuard><div className="p-8 text-center text-gray-400">Đang tải...</div></AuthGuard>;
+  if (!customer) return <AuthGuard><div className="p-8 text-center text-slate-400 text-sm">Đang tải...</div></AuthGuard>;
 
   return (
     <AuthGuard>
-      <div>
-        <div className="flex items-center gap-2 bg-[#1565C0] text-white px-4 py-4 sticky top-0 z-40">
-          <button onClick={() => router.back()} className="text-white text-xl">←</button>
-          <h1 className="text-lg font-semibold">{customer.name}</h1>
+      <div className="pb-8 min-h-screen bg-[#F8F9FB]">
+        <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-20 shadow-sm flex items-center gap-3">
+          <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center text-slate-700 -ml-2">
+            <span className="text-2xl leading-none">‹</span>
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#004EAB] text-white flex items-center justify-center font-bold">
+              {customer.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">{customer.name}</h1>
+              <p className="text-xs text-slate-500">{customer.phone} · {customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</p>
+            </div>
+          </div>
         </div>
+
         <div className="p-4 space-y-4">
-          <Card>
-            <h3 className="font-semibold text-gray-800 mb-3 text-sm">Thông tin khách hàng</h3>
-            <div className="space-y-1 text-sm">
-              <p><span className="text-gray-500">SĐT:</span> {customer.phone}</p>
-              <p><span className="text-gray-500">Loại:</span> {customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</p>
-              {customer.address && <p><span className="text-gray-500">Địa chỉ:</span> {customer.address}</p>}
-              {customer.notes && <p><span className="text-gray-500">Ghi chú:</span> {customer.notes}</p>}
+          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="text-[15px] font-bold text-slate-900 mb-4">Thông tin</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">SĐT</span><span className="font-medium text-[#004EAB]">{customer.phone}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Loại</span><span className="text-slate-700">{customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</span></div>
+              {customer.address && <div className="flex justify-between"><span className="text-slate-500">Địa chỉ</span><span className="text-slate-700 text-right max-w-[60%]">{customer.address}</span></div>}
+              {customer.notes && <div className="flex justify-between"><span className="text-slate-500">Ghi chú</span><span className="text-slate-700">{customer.notes}</span></div>}
             </div>
-          </Card>
-          <Card>
-            <h3 className="font-semibold text-gray-800 mb-3 text-sm">Lịch sử đơn hàng ({customer.orders.length})</h3>
-            <div className="space-y-2">
-              {customer.orders.length === 0 && <p className="text-gray-400 text-sm text-center py-4">Chưa có đơn hàng</p>}
-              {customer.orders.map((o) => (
-                <div key={o.id} onClick={() => router.push(`/orders/${o.id}`)}
-                  className="flex justify-between items-center py-2 border-b border-gray-50 cursor-pointer last:border-0">
-                  <div>
-                    <p className="text-sm font-medium">{o.order_code}</p>
-                    <p className="text-xs text-gray-400">{o.device_name}</p>
-                  </div>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                    {STATUS_LABELS[o.status] ?? o.status}
-                  </span>
-                </div>
-              ))}
+          </section>
+
+          <h2 className="text-[15px] font-bold text-slate-900 px-1">Lịch sử đơn hàng ({customer.orders.length})</h2>
+          {customer.orders.length === 0 && (
+            <p className="text-slate-400 text-sm text-center py-4">Chưa có đơn hàng</p>
+          )}
+          {customer.orders.map((o) => (
+            <div
+              key={o.id}
+              onClick={() => router.push(`/orders/${o.id}`)}
+              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex justify-between items-center cursor-pointer active:bg-slate-50"
+            >
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-0.5">{o.order_code}</h3>
+                <p className="text-xs text-slate-500">{new Date(o.created_at).toLocaleDateString('vi-VN')} · {o.device_name}</p>
+              </div>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-medium ${
+                o.status === 'DA_GIAO' ? 'bg-[#E0F2E9] text-[#1D7F54]' :
+                o.status === 'HUY_TRA_MAY' ? 'bg-red-50 text-red-600' : 'bg-[#EAEFFF] text-[#004EAB]'
+              }`}>
+                {STATUS_LABELS[o.status] ?? o.status}
+              </span>
             </div>
-          </Card>
+          ))}
         </div>
       </div>
     </AuthGuard>

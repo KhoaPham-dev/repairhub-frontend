@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1777133491918" clover="3.2.0">
+  <project timestamp="1777133491919" name="All files">
+    <metrics statements="65" coveredstatements="65" conditionals="53" coveredconditionals="49" methods="24" coveredmethods="23" elements="142" coveredelements="137" complexity="0" loc="65" ncloc="65" packages="2" files="8" classes="8"/>
+    <package name="components">
+      <metrics statements="32" coveredstatements="32" conditionals="30" coveredconditionals="30" methods="13" coveredmethods="13"/>
+      <file name="AuthGuard.tsx" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/components/AuthGuard.tsx">
+        <metrics statements="11" coveredstatements="11" conditionals="4" coveredconditionals="4" methods="2" coveredmethods="2"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="7" count="4" type="stmt"/>
+        <line num="8" count="10" type="stmt"/>
+        <line num="9" count="10" type="stmt"/>
+        <line num="11" count="10" type="stmt"/>
+        <line num="12" count="7" type="cond" truecount="2" falsecount="0"/>
+        <line num="13" count="1" type="stmt"/>
+        <line num="15" count="6" type="stmt"/>
+        <line num="19" count="10" type="cond" truecount="2" falsecount="0"/>
+      </file>
+      <file name="BottomNav.tsx" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/components/BottomNav.tsx">
+        <metrics statements="13" coveredstatements="13" conditionals="14" coveredconditionals="14" methods="5" coveredmethods="5"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="7" count="1" type="stmt"/>
+        <line num="9" count="1" type="stmt"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="20" count="7" type="stmt"/>
+        <line num="28" count="7" type="stmt"/>
+        <line num="29" count="7" type="stmt"/>
+        <line num="31" count="7" type="cond" truecount="2" falsecount="0"/>
+        <line num="34" count="16" type="cond" truecount="2" falsecount="0"/>
+        <line num="51" count="8" type="stmt"/>
+        <line num="64" count="8" type="stmt"/>
+      </file>
+      <file name="Card.tsx" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/components/Card.tsx">
+        <metrics statements="1" coveredstatements="1" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
+        <line num="6" count="5" type="cond" truecount="1" falsecount="0"/>
+      </file>
+      <file name="Input.tsx" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/components/Input.tsx">
+        <metrics statements="1" coveredstatements="1" conditionals="2" coveredconditionals="2" methods="1" coveredmethods="1"/>
+        <line num="12" count="6" type="cond" truecount="1" falsecount="0"/>
+      </file>
+      <file name="PageHeader.tsx" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/components/PageHeader.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="6" coveredconditionals="6" methods="1" coveredmethods="1"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="12" count="6" type="stmt"/>
+        <line num="13" count="6" type="cond" truecount="2" falsecount="0"/>
+      </file>
+      <file name="SegmentedControl.tsx" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/components/SegmentedControl.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="3" coveredconditionals="3" methods="3" coveredmethods="3"/>
+        <line num="13" count="5" type="cond" truecount="1" falsecount="0"/>
+        <line num="17" count="15" type="stmt"/>
+        <line num="20" count="1" type="stmt"/>
+      </file>
+    </package>
+    <package name="lib">
+      <metrics statements="33" coveredstatements="33" conditionals="23" coveredconditionals="19" methods="11" coveredmethods="10"/>
+      <file name="api.ts" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/lib/api.ts">
+        <metrics statements="18" coveredstatements="18" conditionals="17" coveredconditionals="15" methods="6" coveredmethods="5"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="3" count="1" type="cond" truecount="2" falsecount="0"/>
+        <line num="6" count="12" type="stmt"/>
+        <line num="7" count="12" type="stmt"/>
+        <line num="11" count="12" type="cond" truecount="2" falsecount="0"/>
+        <line num="13" count="12" type="stmt"/>
+        <line num="15" count="12" type="cond" truecount="2" falsecount="0"/>
+        <line num="16" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="20" count="11" type="cond" truecount="2" falsecount="0"/>
+        <line num="21" count="2" type="stmt"/>
+        <line num="22" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="25" count="9" type="stmt"/>
+        <line num="28" count="12" type="stmt"/>
+        <line num="29" count="8" type="stmt"/>
+        <line num="31" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="33" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="34" count="1" type="stmt"/>
+      </file>
+      <file name="auth.ts" path="/Users/agile/Desktop/Code/repair-hub/repos/code/repairhub-frontend/lib/auth.ts">
+        <metrics statements="15" coveredstatements="15" conditionals="6" coveredconditionals="4" methods="5" coveredmethods="5"/>
+        <line num="9" count="2" type="stmt"/>
+        <line num="10" count="2" type="cond" truecount="1" falsecount="1"/>
+        <line num="11" count="2" type="stmt"/>
+        <line num="14" count="3" type="stmt"/>
+        <line num="15" count="6" type="cond" truecount="1" falsecount="1"/>
+        <line num="16" count="6" type="stmt"/>
+        <line num="17" count="6" type="cond" truecount="2" falsecount="0"/>
+        <line num="20" count="6" type="stmt"/>
+        <line num="21" count="6" type="stmt"/>
+        <line num="22" count="6" type="stmt"/>
+        <line num="25" count="2" type="stmt"/>
+        <line num="26" count="2" type="stmt"/>
+        <line num="27" count="2" type="stmt"/>
+        <line num="30" count="3" type="stmt"/>
+        <line num="31" count="3" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>

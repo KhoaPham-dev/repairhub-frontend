@@ -73,59 +73,73 @@ export default function OrderDetailPage() {
     }
   }
 
-  if (!order) return <AuthGuard><div className="p-8 text-center text-gray-400">Đang tải...</div></AuthGuard>;
+  if (!order) return <AuthGuard><div className="p-8 text-center text-slate-400 text-sm">Đang tải...</div></AuthGuard>;
 
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
   return (
     <AuthGuard>
-      <div>
-        <div className="flex items-center gap-2 bg-[#1565C0] text-white px-4 py-4 sticky top-0 z-40">
-          <button onClick={() => router.back()} className="text-white text-xl">←</button>
-          <h1 className="text-lg font-semibold">{order.order_code}</h1>
+      <div className="pb-8 min-h-screen bg-[#F8F9FB]">
+        <div className="bg-white px-4 pt-12 pb-4 sticky top-0 z-20 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center text-slate-700 -ml-2">
+              <span className="text-2xl leading-none">‹</span>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">{order.order_code}</h1>
+              <p className="text-xs text-slate-500">{new Date(order.created_at).toLocaleDateString('vi-VN')}</p>
+            </div>
+          </div>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+            order.status === 'DA_GIAO' || order.status === 'SUA_XONG' ? 'bg-[#E0F2E9] text-[#1D7F54]' :
+            order.status === 'HUY_TRA_MAY' ? 'bg-red-50 text-red-600' : 'bg-[#EAEFFF] text-[#004EAB]'
+          }`}>
+            {STATUS_LABELS[order.status] ?? order.status}
+          </span>
         </div>
 
         <div className="p-4 space-y-4">
-          <Card>
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                {STATUS_LABELS[order.status] ?? order.status}
-              </span>
-              <span className="text-xs text-gray-400">{new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
+          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="text-[15px] font-bold text-slate-900 mb-4">Thông tin khách hàng</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">Tên KH</span><span className="font-medium text-slate-900">{order.customer_name}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">SĐT</span><span className="font-medium text-[#004EAB]">{order.customer_phone}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Chi nhánh</span><span className="text-slate-700">{order.branch_name}</span></div>
             </div>
-            <div className="space-y-1 text-sm">
-              <p><span className="text-gray-500">Khách:</span> <span className="font-medium">{order.customer_name}</span></p>
-              <p><span className="text-gray-500">SĐT:</span> {order.customer_phone}</p>
-              <p><span className="text-gray-500">Chi nhánh:</span> {order.branch_name}</p>
-              <p><span className="text-gray-500">Thiết bị:</span> {order.device_name}</p>
-              {order.serial_imei && <p><span className="text-gray-500">Serial:</span> {order.serial_imei}</p>}
-              <p><span className="text-gray-500">Lỗi:</span> {order.fault_description}</p>
-              <p><span className="text-gray-500">Báo giá:</span> <span className="font-semibold text-[#1565C0]">{order.quotation.toLocaleString('vi-VN')}đ</span></p>
+          </section>
+
+          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="text-[15px] font-bold text-slate-900 mb-4">Thiết bị</h2>
+            <div className="space-y-2 text-sm">
+              <p className="font-medium text-slate-900">{order.device_name}</p>
+              {order.serial_imei && <p className="text-xs text-slate-500">Serial: {order.serial_imei}</p>}
+              <div className="p-3 bg-[#f8fafc] rounded-xl text-slate-700 border border-slate-100">{order.fault_description}</div>
+              <p className="font-semibold text-[#004EAB]">Báo giá: {order.quotation.toLocaleString('vi-VN')}đ</p>
               {order.warranty_end_date && (
-                <p><span className="text-gray-500">Bảo hành đến:</span> {new Date(order.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                <p className="text-xs text-slate-500">Bảo hành đến: {new Date(order.warranty_end_date).toLocaleDateString('vi-VN')}</p>
               )}
             </div>
-          </Card>
+          </section>
 
           {order.images.length > 0 && (
-            <Card>
-              <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ảnh ({order.images.length})</h3>
+            <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+              <h2 className="text-[15px] font-bold text-slate-900 mb-3">Ảnh ({order.images.length})</h2>
               <div className="grid grid-cols-3 gap-2">
                 {order.images.map((img) => (
                   <img key={img.id} src={`${API_BASE}/uploads/${img.image_path}`}
-                    alt={img.image_type} className="w-full h-24 object-cover rounded-lg" />
+                    alt={img.image_type} className="w-full h-24 object-cover rounded-xl" />
                 ))}
               </div>
-            </Card>
+            </section>
           )}
 
           {!isTerminal && (
-            <Card>
-              <h3 className="font-semibold text-gray-800 mb-3 text-sm">Cập nhật trạng thái</h3>
+            <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+              <h2 className="text-[15px] font-bold text-slate-900 mb-4">Cập nhật trạng thái</h2>
               <div className="space-y-3">
                 <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]">
+                  className="w-full bg-[#f8fafc] border border-slate-200 focus:border-[#004EAB] rounded-xl px-4 py-3 text-sm outline-none">
                   <option value="">Chọn trạng thái mới</option>
                   {ALL_STATUSES.filter((s) => s !== order.status).map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -133,36 +147,39 @@ export default function OrderDetailPage() {
                 </select>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                   placeholder="Ghi chú (tuỳ chọn)" rows={2}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0] resize-none" />
+                  className="w-full bg-[#f8fafc] border border-transparent focus:border-[#004EAB] rounded-xl px-4 py-3 text-sm outline-none resize-none" />
                 <input type="file" accept="image/*" multiple capture="environment"
                   onChange={(e) => setNewImages(Array.from(e.target.files ?? []))}
-                  className="text-sm text-gray-600" />
+                  className="text-sm text-slate-600" />
                 {error && <p className="text-red-500 text-sm">{error}</p>}
                 <button onClick={handleStatusUpdate} disabled={updating}
-                  className="w-full bg-[#1565C0] text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-60">
-                  {updating ? 'Đang cập nhật...' : 'Cập nhật'}
+                  className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-sm shadow-sm disabled:opacity-60">
+                  {updating ? 'Đang cập nhật...' : 'Cập nhật trạng thái'}
                 </button>
               </div>
-            </Card>
+            </section>
           )}
 
-          <Card>
-            <h3 className="font-semibold text-gray-800 mb-3 text-sm">Lịch sử trạng thái</h3>
-            <div className="space-y-3">
-              {order.history.map((h) => (
-                <div key={h.id} className="flex gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-[#1565C0] mt-1.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-gray-700">
+          <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h2 className="text-[15px] font-bold text-slate-900 mb-4">Tiến độ</h2>
+            <div className="space-y-4">
+              {order.history.map((h, i) => (
+                <div key={h.id} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="w-5 h-5 rounded-full bg-[#1D7F54] border-4 border-[#E0F2E9]" />
+                    {i < order.history.length - 1 && <div className="w-0.5 h-8 bg-slate-200 mt-1" />}
+                  </div>
+                  <div className="pt-0.5">
+                    <p className="text-sm font-medium text-slate-900">
                       {h.old_status ? `${STATUS_LABELS[h.old_status]} → ` : ''}{STATUS_LABELS[h.new_status] ?? h.new_status}
                     </p>
-                    <p className="text-xs text-gray-400">{h.changed_by_name} · {new Date(h.changed_at).toLocaleString('vi-VN')}</p>
-                    {h.notes && <p className="text-xs text-gray-500 mt-0.5 italic">{h.notes}</p>}
+                    <p className="text-xs text-slate-500">{h.changed_by_name} · {new Date(h.changed_at).toLocaleString('vi-VN')}</p>
+                    {h.notes && <p className="text-xs text-slate-500 mt-0.5 italic">{h.notes}</p>}
                   </div>
                 </div>
               ))}
             </div>
-          </Card>
+          </section>
         </div>
       </div>
     </AuthGuard>

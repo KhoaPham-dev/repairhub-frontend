@@ -34,34 +34,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1565C0] flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
+    <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center px-4">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 w-full">
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">🔧</div>
-          <h1 className="text-2xl font-bold text-[#1565C0]">RepairHub</h1>
-          <p className="text-gray-500 text-sm mt-1">Quản lý sửa chữa thiết bị</p>
+          <div className="w-16 h-16 bg-[#e6f0fa] rounded-2xl flex items-center justify-center mx-auto mb-4 text-[#004EAB]">
+            <span className="text-2xl font-bold">R</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">RepairHub</h1>
+          <p className="text-slate-500 text-sm mt-1">Quản lý sửa chữa thiết bị</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập</label>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 block">Tên đăng nhập</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-[#1565C0] text-base"
+              className="w-full bg-[#f8fafc] border border-transparent focus:border-[#004EAB] focus:bg-white focus:ring-1 focus:ring-[#004EAB] outline-none rounded-xl px-4 py-3 text-sm transition-colors placeholder:text-slate-400"
               placeholder="Nhập tên đăng nhập"
               required
               autoComplete="username"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700 block">Mật khẩu</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-[#1565C0] text-base"
+              className="w-full bg-[#f8fafc] border border-transparent focus:border-[#004EAB] focus:bg-white focus:ring-1 focus:ring-[#004EAB] outline-none rounded-xl px-4 py-3 text-sm transition-colors placeholder:text-slate-400"
               placeholder="Nhập mật khẩu"
               required
               autoComplete="current-password"
@@ -73,7 +75,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#1565C0] text-white py-3 rounded-xl font-semibold text-base disabled:opacity-60 mt-2"
+            className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-[15px] shadow-sm active:opacity-90 transition-opacity disabled:opacity-60 mt-2"
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
