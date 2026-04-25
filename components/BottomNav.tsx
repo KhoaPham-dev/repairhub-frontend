@@ -7,17 +7,20 @@ const tabs = [
   { href: '/', label: 'Tổng quan', icon: '📊' },
   { href: '/orders', label: 'Đơn hàng', icon: '📋' },
   { href: '/customers', label: 'Khách hàng', icon: '👥' },
-  { href: '/staff', label: 'Nhân viên', icon: '👤' },
+  { href: '/warranty', label: 'Bảo hành', icon: '🛡️' },
+  { href: '/settings', label: 'Cài đặt', icon: '⚙️' },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname === '/login') return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
       <div className="flex">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.href;
+          const isActive = pathname === tab.href || (tab.href !== '/' && pathname.startsWith(tab.href));
           return (
             <Link
               key={tab.href}
@@ -26,8 +29,8 @@ export default function BottomNav() {
                 isActive ? 'text-[#1565C0]' : 'text-gray-500'
               }`}
             >
-              <span className="text-xl mb-1">{tab.icon}</span>
-              <span>{tab.label}</span>
+              <span className="text-lg mb-0.5">{tab.icon}</span>
+              <span className="text-[10px]">{tab.label}</span>
             </Link>
           );
         })}
