@@ -80,11 +80,8 @@ export default function OrderDetailPage() {
 
   return (
     <AuthGuard>
-      <div>
-        <div className="flex items-center gap-2 bg-[#1565C0] text-white px-4 py-4 sticky top-0 z-40">
-          <button onClick={() => router.back()} className="text-white text-xl">←</button>
-          <h1 className="text-lg font-semibold">{order.order_code}</h1>
-        </div>
+      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+        <PageHeader title={order.order_code} onBack={() => router.back()} />
 
         <div className="p-4 space-y-4">
           <Card>

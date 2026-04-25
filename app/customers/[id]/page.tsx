@@ -33,11 +33,8 @@ export default function CustomerDetailPage() {
 
   return (
     <AuthGuard>
-      <div>
-        <div className="flex items-center gap-2 bg-[#1565C0] text-white px-4 py-4 sticky top-0 z-40">
-          <button onClick={() => router.back()} className="text-white text-xl">←</button>
-          <h1 className="text-lg font-semibold">{customer.name}</h1>
-        </div>
+      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+        <PageHeader title={customer.name} subtitle="Khách hàng" onBack={() => router.back()} />
         <div className="p-4 space-y-4">
           <Card>
             <h3 className="font-semibold text-gray-800 mb-3 text-sm">Thông tin khách hàng</h3>
