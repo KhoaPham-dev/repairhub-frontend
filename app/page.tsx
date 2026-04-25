@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
+import PageHeader from '@/components/PageHeader';
 import SegmentedControl from '@/components/SegmentedControl';
 import { api } from '@/lib/api';
 import { getUser } from '@/lib/auth';
@@ -40,10 +41,11 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-[#F8F9FB] pb-24">
-        <div className="px-4 pt-12 pb-4 bg-[#F8F9FB] sticky top-0 z-10 w-full mb-2">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-1">Tổng quan</h1>
-          <p className="text-sm text-slate-500 mb-4">Xin chào, <span className="font-semibold text-slate-700">{user?.full_name}</span></p>
-          <SegmentedControl tabs={PERIOD_TABS} active={period} onChange={setPeriod} />
+        <div className="sticky top-0 z-10 bg-[#F8F9FB]">
+          <PageHeader title="Tổng quan" subtitle={`Xin chào, ${user?.full_name ?? ''}`} />
+          <div className="px-4 pb-3">
+            <SegmentedControl tabs={PERIOD_TABS} active={period} onChange={setPeriod} />
+          </div>
         </div>
 
         <div className="px-4 space-y-4">
