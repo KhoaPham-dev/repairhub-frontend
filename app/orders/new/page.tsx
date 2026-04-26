@@ -10,16 +10,11 @@ import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
-interface WarrantyResult {
-  id: string; order_code: string; device_name: string; warranty_end_date: string | null;
-  warranty_status: string; customer_phone: string; customer_name: string;
-}
 interface ApiResponse<T> { success: boolean; data: T }
 
 const PRODUCT_TYPES = [
   { value: 'SPEAKER', label: 'Loa' },
   { value: 'HEADPHONE', label: 'Tai nghe' },
-  { value: 'BAO_HANH', label: 'Bảo Hành' },
 ];
 
 const WARRANTY_MONTHS = [3, 6, 12];
@@ -30,7 +25,6 @@ interface ProductRow {
   serial_imei: string;
   accessories: string;
   fault_description: string;
-  quotation: string;
   warranty_period_months: number;
   warranty_months_custom: string;
   warranty_months_mode: 'preset' | 'custom';
@@ -40,7 +34,7 @@ interface ProductRow {
 function emptyProduct(): ProductRow {
   return {
     product_type: 'SPEAKER', device_name: '', serial_imei: '',
-    accessories: '', fault_description: '', quotation: '',
+    accessories: '', fault_description: '',
     warranty_period_months: 3, warranty_months_mode: 'preset', warranty_months_custom: '',
     images: [],
   };
@@ -57,11 +51,6 @@ export default function NewOrderPage() {
   const [products, setProducts] = useState<ProductRow[]>([emptyProduct()]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Bảo Hành flow
-  const [bhWarranties, setBhWarranties] = useState<WarrantyResult[]>([]);
-  const [bhSearching, setBhSearching] = useState(false);
-  const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
 
   useEffect(() => {
     api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
@@ -97,45 +86,6 @@ export default function NewOrderPage() {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function searchBhWarranties(phone: string) {
-    if (!phone.trim()) return;
-    setBhSearching(true);
-    setBhWarranties([]);
-    setSelectedWarranty(null);
-    try {
-      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(phone)}`);
-      setBhWarranties(r.data);
-    } catch { /* ignore */ } finally {
-      setBhSearching(false);
-    }
-  }
-
-  async function handleBhSubmit() {
-    if (!selectedWarranty) { setError('Vui lòng chọn đơn bảo hành'); return; }
-    if (!branchId) { setError('Vui lòng chọn chi nhánh'); return; }
-    setError('');
-    setLoading(true);
-    try {
-      const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
-        source_order_id: selectedWarranty.id,
-        branch_id: branchId,
-      });
-      router.push(`/orders/${r.data.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
-
-  useEffect(() => {
-    if (isBaoHanhMode && customerQuery) searchBhWarranties(customerQuery);
-    if (!isBaoHanhMode) { setBhWarranties([]); setSelectedWarranty(null); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBaoHanhMode]);
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
@@ -159,7 +109,6 @@ export default function NewOrderPage() {
         serial_imei: p.serial_imei || undefined,
         accessories: p.accessories || undefined,
         fault_description: p.fault_description,
-        quotation: Number(p.quotation) || 0,
         warranty_period_months: p.warranty_months_mode === 'custom'
           ? (Number(p.warranty_months_custom) || 3)
           : p.warranty_period_months,
@@ -294,106 +243,69 @@ export default function NewOrderPage() {
                 onChange={(v) => updateProduct(idx, 'product_type', v)}
               />
 
-              {product.product_type === 'BAO_HANH' ? (
-                <div className="space-y-2">
-                  {!customerQuery ? (
-                    <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
-                  ) : bhSearching ? (
-                    <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
-                  ) : bhWarranties.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
-                  ) : bhWarranties.map((w) => (
-                    <button key={w.id} type="button"
-                      onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
-                      className={`w-full text-left p-4 rounded-xl border text-sm transition-colors ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
-                      <p className="font-semibold text-slate-900">{w.order_code}</p>
-                      <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
-                      {w.warranty_end_date && (
-                        <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
-                      )}
+              <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
+                placeholder="Tên thiết bị *" required
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+              <input value={product.serial_imei} onChange={(e) => updateProduct(idx, 'serial_imei', e.target.value)}
+                placeholder="Serial / IMEI"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+              <input value={product.accessories} onChange={(e) => updateProduct(idx, 'accessories', e.target.value)}
+                placeholder="Phụ kiện kèm theo"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+              <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
+                placeholder="Mô tả lỗi *" required rows={3}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
+
+              {/* Warranty package */}
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Bảo hành</p>
+                <div className="flex gap-2 flex-wrap">
+                  {WARRANTY_MONTHS.map((m) => (
+                    <button key={m} type="button"
+                      onClick={() => { updateProduct(idx, 'warranty_period_months', m); updateProduct(idx, 'warranty_months_mode', 'preset'); }}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'preset' && product.warranty_period_months === m ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                      {m} tháng
                     </button>
                   ))}
+                  <button type="button"
+                    onClick={() => updateProduct(idx, 'warranty_months_mode', 'custom')}
+                    className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'custom' ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                    Khác
+                  </button>
                 </div>
-              ) : (
-                <>
-                  <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
-                    placeholder="Tên thiết bị *" required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-                  <input value={product.serial_imei} onChange={(e) => updateProduct(idx, 'serial_imei', e.target.value)}
-                    placeholder="Serial / IMEI"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-                  <input value={product.accessories} onChange={(e) => updateProduct(idx, 'accessories', e.target.value)}
-                    placeholder="Phụ kiện kèm theo"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-                  <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
-                    placeholder="Mô tả lỗi *" required rows={3}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
-                  <input type="number" value={product.quotation} onChange={(e) => updateProduct(idx, 'quotation', e.target.value)}
-                    placeholder="Báo giá (VNĐ) *" required min="0"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                {product.warranty_months_mode === 'custom' && (
+                  <input type="number" value={product.warranty_months_custom}
+                    onChange={(e) => updateProduct(idx, 'warranty_months_custom', e.target.value)}
+                    placeholder="Số tháng" min="1"
+                    className="mt-2 w-32 px-4 py-2 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
+                )}
+              </div>
 
-                  {/* Warranty package */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-2">Bảo hành</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {WARRANTY_MONTHS.map((m) => (
-                        <button key={m} type="button"
-                          onClick={() => { updateProduct(idx, 'warranty_period_months', m); updateProduct(idx, 'warranty_months_mode', 'preset'); }}
-                          className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'preset' && product.warranty_period_months === m ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                          {m} tháng
-                        </button>
-                      ))}
-                      <button type="button"
-                        onClick={() => updateProduct(idx, 'warranty_months_mode', 'custom')}
-                        className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'custom' ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                        Khác
-                      </button>
-                    </div>
-                    {product.warranty_months_mode === 'custom' && (
-                      <input type="number" value={product.warranty_months_custom}
-                        onChange={(e) => updateProduct(idx, 'warranty_months_custom', e.target.value)}
-                        placeholder="Số tháng" min="1"
-                        className="mt-2 w-32 px-4 py-2 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
-                    )}
-                  </div>
-
-                  {/* Images upload inside product card */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
-                    <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
-                      <Upload size={20} className="mb-2" />
-                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh` : 'Chọn hình ảnh'}</span>
-                      <input type="file" accept="image/*" multiple capture="environment"
-                        onChange={(e) => updateProduct(idx, 'images', Array.from(e.target.files ?? []))}
-                        className="hidden" />
-                    </label>
-                  </div>
-                </>
-              )}
+              {/* Images */}
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
+                <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
+                  <Upload size={20} className="mb-2" />
+                  <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh` : 'Chọn hình ảnh'}</span>
+                  <input type="file" accept="image/*" multiple capture="environment"
+                    onChange={(e) => updateProduct(idx, 'images', Array.from(e.target.files ?? []))}
+                    className="hidden" />
+                </label>
+              </div>
             </div>
           ))}
 
-          {/* Add product button — hidden in Bảo Hành mode */}
-          {!isBaoHanhMode && (
-            <button type="button" onClick={addProduct}
-              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
-              <Plus size={18} /> Thêm sản phẩm
-            </button>
-          )}
+          <button type="button" onClick={addProduct}
+            className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
+            <Plus size={18} /> Thêm sản phẩm
+          </button>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          {isBaoHanhMode ? (
-            <button type="button" onClick={handleBhSubmit} disabled={loading || !selectedWarranty}
-              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
-              {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
-            </button>
-          ) : (
-            <button type="submit" disabled={loading}
-              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
-              {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
-            </button>
-          )}
+          <button type="submit" disabled={loading}
+            className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+            {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
+          </button>
         </form>
       </div>
     </AuthGuard>
