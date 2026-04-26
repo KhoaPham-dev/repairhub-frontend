@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Upload } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
@@ -131,9 +132,13 @@ export default function OrderDetailPage() {
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                   placeholder="Ghi chú (tuỳ chọn)" rows={2}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0] resize-none" />
-                <input type="file" accept="image/*" multiple capture="environment"
-                  onChange={(e) => setNewImages(Array.from(e.target.files ?? []))}
-                  className="text-sm text-gray-600" />
+                <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
+                  <Upload size={20} className="mb-2" />
+                  <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh` : 'Chọn hình ảnh'}</span>
+                  <input type="file" accept="image/*" multiple capture="environment"
+                    onChange={(e) => setNewImages(Array.from(e.target.files ?? []))}
+                    className="hidden" />
+                </label>
                 {error && <p className="text-red-500 text-sm">{error}</p>}
                 <button onClick={handleStatusUpdate} disabled={updating}
                   className="w-full bg-[#1565C0] text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-60">
