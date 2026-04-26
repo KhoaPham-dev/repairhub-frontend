@@ -15,9 +15,9 @@ interface ApiResponse<T> { success: boolean; data: T }
 const PRODUCT_TYPES = [
   { value: 'SPEAKER', label: 'Loa' },
   { value: 'HEADPHONE', label: 'Tai nghe' },
+  { value: 'BAO_HANH', label: 'Bảo Hành' },
 ];
 
-const WARRANTY_MONTHS = [3, 6, 12];
 
 interface ProductRow {
   product_type: string;
@@ -25,18 +25,13 @@ interface ProductRow {
   serial_imei: string;
   accessories: string;
   fault_description: string;
-  warranty_period_months: number;
-  warranty_months_custom: string;
-  warranty_months_mode: 'preset' | 'custom';
   images: File[];
 }
 
 function emptyProduct(): ProductRow {
   return {
     product_type: 'SPEAKER', device_name: '', serial_imei: '',
-    accessories: '', fault_description: '',
-    warranty_period_months: 3, warranty_months_mode: 'preset', warranty_months_custom: '',
-    images: [],
+    accessories: '', fault_description: '', images: [],
   };
 }
 
@@ -109,9 +104,6 @@ export default function NewOrderPage() {
         serial_imei: p.serial_imei || undefined,
         accessories: p.accessories || undefined,
         fault_description: p.fault_description,
-        warranty_period_months: p.warranty_months_mode === 'custom'
-          ? (Number(p.warranty_months_custom) || 3)
-          : p.warranty_period_months,
       }));
 
       let firstOrderId: string;
@@ -255,31 +247,6 @@ export default function NewOrderPage() {
               <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
                 placeholder="Mô tả lỗi *" required rows={3}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
-
-              {/* Warranty package */}
-              <div>
-                <p className="text-xs text-slate-500 mb-2">Bảo hành</p>
-                <div className="flex gap-2 flex-wrap">
-                  {WARRANTY_MONTHS.map((m) => (
-                    <button key={m} type="button"
-                      onClick={() => { updateProduct(idx, 'warranty_period_months', m); updateProduct(idx, 'warranty_months_mode', 'preset'); }}
-                      className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'preset' && product.warranty_period_months === m ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                      {m} tháng
-                    </button>
-                  ))}
-                  <button type="button"
-                    onClick={() => updateProduct(idx, 'warranty_months_mode', 'custom')}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'custom' ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                    Khác
-                  </button>
-                </div>
-                {product.warranty_months_mode === 'custom' && (
-                  <input type="number" value={product.warranty_months_custom}
-                    onChange={(e) => updateProduct(idx, 'warranty_months_custom', e.target.value)}
-                    placeholder="Số tháng" min="1"
-                    className="mt-2 w-32 px-4 py-2 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
-                )}
-              </div>
 
               {/* Images */}
               <div>
