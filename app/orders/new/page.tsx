@@ -57,6 +57,10 @@ export default function NewOrderPage() {
 
   const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
 
+  const hasCustomer = !!(selectedCustomer || (newCustomer.phone.trim() && newCustomer.name.trim()));
+  const allProductsFilled = products.every((p) => p.device_name.trim() && p.fault_description.trim());
+  const canSubmit = !loading && !!branchId && hasCustomer && allProductsFilled;
+
   useEffect(() => {
     api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
       setBranches(r.data);
@@ -347,7 +351,7 @@ export default function NewOrderPage() {
               {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
             </button>
           ) : (
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={!canSubmit}
               className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
               {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
             </button>
