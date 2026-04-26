@@ -99,13 +99,14 @@ export default function NewOrderPage() {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function searchBhWarranties() {
-    if (!bhPhone.trim()) return;
+  async function searchBhWarranties(phone?: string) {
+    const q = phone ?? bhPhone;
+    if (!q.trim()) return;
     setBhSearching(true);
     setBhWarranties([]);
     setSelectedWarranty(null);
     try {
-      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(bhPhone)}`);
+      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(q)}`);
       setBhWarranties(r.data);
     } catch {
       // ignore
@@ -211,6 +212,14 @@ export default function NewOrderPage() {
   }
 
   const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
+
+  useEffect(() => {
+    if (isBaoHanhMode && customerQuery) {
+      setBhPhone(customerQuery);
+      searchBhWarranties(customerQuery);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBaoHanhMode]);
 
   return (
     <AuthGuard>
@@ -364,19 +373,13 @@ export default function NewOrderPage() {
           {isBaoHanhMode && (
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
               <h2 className="font-bold text-slate-900 text-[15px]">Tra cứu bảo hành</h2>
-              <div className="flex gap-2">
-                <input type="tel" value={bhPhone} onChange={(e) => setBhPhone(e.target.value)}
-                  placeholder="Số điện thoại khách hàng"
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
-                <button type="button" onClick={searchBhWarranties} disabled={bhSearching}
-                  className="px-4 py-3 bg-[#004EAB] text-white rounded-xl text-sm font-semibold disabled:opacity-60">
-                  {bhSearching ? '...' : 'Tìm'}
-                </button>
-              </div>
-
-              {bhWarranties.length === 0 && bhPhone && !bhSearching && (
-                <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành</p>
-              )}
+              {!customerQuery ? (
+                <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
+              ) : bhSearching ? (
+                <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
+              ) : bhWarranties.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
+              ) : null}
 
               {bhWarranties.map((w) => (
                 <button key={w.id} type="button"
