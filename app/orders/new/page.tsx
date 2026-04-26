@@ -10,6 +10,10 @@ import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
+interface WarrantyResult {
+  id: string; order_code: string; device_name: string; warranty_end_date: string | null;
+  warranty_status: string;
+}
 interface ApiResponse<T> { success: boolean; data: T }
 
 const PRODUCT_TYPES = [
@@ -47,6 +51,12 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [bhWarranties, setBhWarranties] = useState<WarrantyResult[]>([]);
+  const [bhSearching, setBhSearching] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
+
+  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
+
   useEffect(() => {
     api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
       setBranches(r.data);
@@ -79,6 +89,42 @@ export default function NewOrderPage() {
 
   function removeProduct(idx: number) {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function searchBhWarranties(phone: string) {
+    if (!phone.trim()) return;
+    setBhSearching(true);
+    setBhWarranties([]);
+    setSelectedWarranty(null);
+    try {
+      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(phone)}`);
+      setBhWarranties(r.data);
+    } catch { /* ignore */ } finally {
+      setBhSearching(false);
+    }
+  }
+
+  useEffect(() => {
+    if (isBaoHanhMode && customerQuery) searchBhWarranties(customerQuery);
+    if (!isBaoHanhMode) { setBhWarranties([]); setSelectedWarranty(null); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBaoHanhMode]);
+
+  async function handleBhSubmit() {
+    if (!selectedWarranty) { setError('Vui lòng chọn đơn bảo hành'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
+        source_order_id: selectedWarranty.id,
+        branch_id: branchId,
+      });
+      router.push(`/orders/${r.data.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -235,44 +281,77 @@ export default function NewOrderPage() {
                 onChange={(v) => updateProduct(idx, 'product_type', v)}
               />
 
-              <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
-                placeholder="Tên thiết bị *" required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-              <input value={product.serial_imei} onChange={(e) => updateProduct(idx, 'serial_imei', e.target.value)}
-                placeholder="Serial / IMEI"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-              <input value={product.accessories} onChange={(e) => updateProduct(idx, 'accessories', e.target.value)}
-                placeholder="Phụ kiện kèm theo"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-              <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
-                placeholder="Mô tả lỗi *" required rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
+              {product.product_type === 'BAO_HANH' ? (
+                <div className="space-y-2">
+                  {!customerQuery ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
+                  ) : bhSearching ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
+                  ) : bhWarranties.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
+                  ) : bhWarranties.map((w) => (
+                    <button key={w.id} type="button"
+                      onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
+                      className={`w-full text-left p-4 rounded-xl border text-sm transition-colors ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
+                      <p className="font-semibold text-slate-900">{w.order_code}</p>
+                      <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
+                      {w.warranty_end_date && (
+                        <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
+                    placeholder="Tên thiết bị *" required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  <input value={product.serial_imei} onChange={(e) => updateProduct(idx, 'serial_imei', e.target.value)}
+                    placeholder="Serial / IMEI"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  <input value={product.accessories} onChange={(e) => updateProduct(idx, 'accessories', e.target.value)}
+                    placeholder="Phụ kiện kèm theo"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
+                    placeholder="Mô tả lỗi *" required rows={3}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
 
-              {/* Images */}
-              <div>
-                <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
-                <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
-                  <Upload size={20} className="mb-2" />
-                  <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh` : 'Chọn hình ảnh'}</span>
-                  <input type="file" accept="image/*" multiple capture="environment"
-                    onChange={(e) => updateProduct(idx, 'images', Array.from(e.target.files ?? []))}
-                    className="hidden" />
-                </label>
-              </div>
+                  {/* Images */}
+                  <div>
+                    <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
+                    <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
+                      <Upload size={20} className="mb-2" />
+                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh` : 'Chọn hình ảnh'}</span>
+                      <input type="file" accept="image/*" multiple capture="environment"
+                        onChange={(e) => updateProduct(idx, 'images', Array.from(e.target.files ?? []))}
+                        className="hidden" />
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
           ))}
 
-          <button type="button" onClick={addProduct}
-            className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
-            <Plus size={18} /> Thêm sản phẩm
-          </button>
+          {!isBaoHanhMode && (
+            <button type="button" onClick={addProduct}
+              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
+              <Plus size={18} /> Thêm sản phẩm
+            </button>
+          )}
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          <button type="submit" disabled={loading}
-            className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
-            {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
-          </button>
+          {isBaoHanhMode ? (
+            <button type="button" onClick={handleBhSubmit} disabled={loading || !selectedWarranty}
+              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
+            </button>
+          ) : (
+            <button type="submit" disabled={loading}
+              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
+            </button>
+          )}
         </form>
       </div>
     </AuthGuard>
