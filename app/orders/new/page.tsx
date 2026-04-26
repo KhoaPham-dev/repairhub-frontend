@@ -10,12 +10,16 @@ import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
+interface WarrantyResult {
+  id: string; order_code: string; device_name: string; warranty_end_date: string | null;
+  warranty_status: string; customer_phone: string; customer_name: string;
+}
 interface ApiResponse<T> { success: boolean; data: T }
 
 const PRODUCT_TYPES = [
   { value: 'SPEAKER', label: 'Loa' },
   { value: 'HEADPHONE', label: 'Tai nghe' },
-  { value: 'OTHER', label: 'Khác' },
+  { value: 'BAO_HANH', label: 'Bảo Hành' },
 ];
 
 const WARRANTY_MONTHS = [3, 6, 12];
@@ -54,6 +58,11 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Bảo Hành flow
+  const [bhWarranties, setBhWarranties] = useState<WarrantyResult[]>([]);
+  const [bhSearching, setBhSearching] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
+
   useEffect(() => {
     api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
       setBranches(r.data);
@@ -87,6 +96,45 @@ export default function NewOrderPage() {
   function removeProduct(idx: number) {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
   }
+
+  async function searchBhWarranties(phone: string) {
+    if (!phone.trim()) return;
+    setBhSearching(true);
+    setBhWarranties([]);
+    setSelectedWarranty(null);
+    try {
+      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(phone)}`);
+      setBhWarranties(r.data);
+    } catch { /* ignore */ } finally {
+      setBhSearching(false);
+    }
+  }
+
+  async function handleBhSubmit() {
+    if (!selectedWarranty) { setError('Vui lòng chọn đơn bảo hành'); return; }
+    if (!branchId) { setError('Vui lòng chọn chi nhánh'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
+        source_order_id: selectedWarranty.id,
+        branch_id: branchId,
+      });
+      router.push(`/orders/${r.data.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
+
+  useEffect(() => {
+    if (isBaoHanhMode && customerQuery) searchBhWarranties(customerQuery);
+    if (!isBaoHanhMode) { setBhWarranties([]); setSelectedWarranty(null); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBaoHanhMode]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -246,7 +294,27 @@ export default function NewOrderPage() {
                 onChange={(v) => updateProduct(idx, 'product_type', v)}
               />
 
-              {product.product_type !== 'BAO_HANH' && (
+              {product.product_type === 'BAO_HANH' ? (
+                <div className="space-y-2">
+                  {!customerQuery ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
+                  ) : bhSearching ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
+                  ) : bhWarranties.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
+                  ) : bhWarranties.map((w) => (
+                    <button key={w.id} type="button"
+                      onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
+                      className={`w-full text-left p-4 rounded-xl border text-sm transition-colors ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
+                      <p className="font-semibold text-slate-900">{w.order_code}</p>
+                      <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
+                      {w.warranty_end_date && (
+                        <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
                 <>
                   <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
                     placeholder="Tên thiết bị *" required
@@ -305,18 +373,27 @@ export default function NewOrderPage() {
             </div>
           ))}
 
-          {/* Add product button */}
-          <button type="button" onClick={addProduct}
-            className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
-            <Plus size={18} /> Thêm sản phẩm
-          </button>
+          {/* Add product button — hidden in Bảo Hành mode */}
+          {!isBaoHanhMode && (
+            <button type="button" onClick={addProduct}
+              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
+              <Plus size={18} /> Thêm sản phẩm
+            </button>
+          )}
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          <button type="submit" disabled={loading}
-            className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
-            {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
-          </button>
+          {isBaoHanhMode ? (
+            <button type="button" onClick={handleBhSubmit} disabled={loading || !selectedWarranty}
+              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
+            </button>
+          ) : (
+            <button type="submit" disabled={loading}
+              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
+            </button>
+          )}
         </form>
       </div>
     </AuthGuard>
