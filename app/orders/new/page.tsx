@@ -10,16 +10,12 @@ import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
-interface WarrantyResult {
-  id: string; order_code: string; device_name: string; warranty_end_date: string | null;
-  warranty_status: string; customer_phone: string; customer_name: string;
-}
 interface ApiResponse<T> { success: boolean; data: T }
 
 const PRODUCT_TYPES = [
   { value: 'SPEAKER', label: 'Loa' },
   { value: 'HEADPHONE', label: 'Tai nghe' },
-  { value: 'BAO_HANH', label: 'Bảo Hành' },
+  { value: 'OTHER', label: 'Khác' },
 ];
 
 const WARRANTY_MONTHS = [3, 6, 12];
@@ -58,13 +54,6 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Bảo Hành flow
-  const [bhPhone, setBhPhone] = useState('');
-  const [bhWarranties, setBhWarranties] = useState<WarrantyResult[]>([]);
-  const [bhSearching, setBhSearching] = useState(false);
-  const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
-  const [bhBranchId, setBhBranchId] = useState('');
-
   useEffect(() => {
     api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
       setBranches(r.data);
@@ -99,52 +88,9 @@ export default function NewOrderPage() {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function searchBhWarranties(phone?: string) {
-    const q = phone ?? bhPhone;
-    if (!q.trim()) return;
-    setBhSearching(true);
-    setBhWarranties([]);
-    setSelectedWarranty(null);
-    try {
-      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(q)}`);
-      setBhWarranties(r.data);
-    } catch {
-      // ignore
-    } finally {
-      setBhSearching(false);
-    }
-  }
-
-  async function handleBhSubmit() {
-    if (!selectedWarranty || !bhBranchId) {
-      setError('Vui lòng chọn bảo hành và chi nhánh');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    try {
-      const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
-        source_order_id: selectedWarranty.id,
-        branch_id: bhBranchId,
-      });
-      router.push(`/orders/${r.data.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-
-    // If any product is BAO_HANH type, redirect to BH flow
-    const hasBaoHanh = products.some((p) => p.product_type === 'BAO_HANH');
-    if (hasBaoHanh) {
-      setError('Vui lòng sử dụng luồng Bảo Hành bên dưới');
-      return;
-    }
 
     if (!branchId) { setError('Vui lòng chọn chi nhánh'); return; }
 
@@ -210,16 +156,6 @@ export default function NewOrderPage() {
       setLoading(false);
     }
   }
-
-  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
-
-  useEffect(() => {
-    if (isBaoHanhMode && customerQuery) {
-      setBhPhone(customerQuery);
-      searchBhWarranties(customerQuery);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBaoHanhMode]);
 
   return (
     <AuthGuard>
@@ -369,69 +305,18 @@ export default function NewOrderPage() {
             </div>
           ))}
 
-          {/* Bảo Hành flow */}
-          {isBaoHanhMode && (
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
-              <h2 className="font-bold text-slate-900 text-[15px]">Tra cứu bảo hành</h2>
-              {!customerQuery ? (
-                <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
-              ) : bhSearching ? (
-                <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
-              ) : bhWarranties.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
-              ) : null}
-
-              {bhWarranties.map((w) => (
-                <button key={w.id} type="button"
-                  onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
-                  className={`w-full text-left p-4 rounded-xl border text-sm ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
-                  <p className="font-semibold text-slate-900">{w.order_code}</p>
-                  <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
-                  {w.warranty_end_date && (
-                    <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
-                  )}
-                </button>
-              ))}
-
-              {selectedWarranty && (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-2">Chi nhánh tiếp nhận</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {branches.map((b) => (
-                        <button key={b.id} type="button"
-                          onClick={() => setBhBranchId(b.id)}
-                          className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${bhBranchId === b.id ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                          {b.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <button type="button" onClick={handleBhSubmit} disabled={loading || !bhBranchId}
-                    className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-sm disabled:opacity-60">
-                    {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Add product button */}
-          {!isBaoHanhMode && (
-            <button type="button" onClick={addProduct}
-              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
-              <Plus size={18} /> Thêm sản phẩm
-            </button>
-          )}
+          <button type="button" onClick={addProduct}
+            className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
+            <Plus size={18} /> Thêm sản phẩm
+          </button>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          {!isBaoHanhMode && (
-            <button type="submit" disabled={loading}
-              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
-              {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
-            </button>
-          )}
+          <button type="submit" disabled={loading}
+            className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+            {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
+          </button>
         </form>
       </div>
     </AuthGuard>
