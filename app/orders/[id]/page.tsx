@@ -6,6 +6,7 @@ import { Upload } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
+import SegmentedControl from '@/components/SegmentedControl';
 import { api } from '@/lib/api';
 
 interface OrderDetail {
@@ -22,7 +23,8 @@ interface OrderDetail {
 interface ApiResponse<T> { success: boolean; data: T }
 
 const STATUS_LABELS: Record<string, string> = {
-  TIEP_NHAN: 'Tiếp nhận', DANG_KIEM_TRA: 'Đang kiểm tra', BAO_GIA: 'Báo giá',
+  TIEP_NHAN: 'Tiếp nhận', DANG_BAO_HANH: 'Đang bảo hành',
+  DANG_KIEM_TRA: 'Đang kiểm tra', BAO_GIA: 'Báo giá',
   CHO_LINH_KIEN: 'Chờ linh kiện', DANG_SUA_CHUA: 'Đang sửa chữa',
   KIEM_TRA_LAI: 'Kiểm tra lại', SUA_XONG: 'Sửa xong',
   DA_GIAO: 'Đã giao', HUY_TRA_MAY: 'Huỷ/Trả máy',
@@ -31,28 +33,78 @@ const STATUS_LABELS: Record<string, string> = {
 const ALL_STATUSES = Object.keys(STATUS_LABELS);
 const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
 
+const WARRANTY_MONTHS_OPTIONS = [
+  { value: '3', label: '3 tháng' },
+  { value: '6', label: '6 tháng' },
+  { value: '12', label: '12 tháng' },
+  { value: 'custom', label: 'Khác' },
+];
+
+function formatMoney(n: number): string {
+  return Math.round(n).toLocaleString('vi-VN');
+}
+
+function parseMoney(s: string): number {
+  return parseInt(s.replace(/\D/g, ''), 10) || 0;
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [order, setOrder] = useState<OrderDetail | null>(null);
+
+  // Appendable fields
   const [newStatus, setNewStatus] = useState('');
   const [notes, setNotes] = useState('');
   const [newImages, setNewImages] = useState<File[]>([]);
+  const [quotation, setQuotation] = useState('');
+  const [warrantyOption, setWarrantyOption] = useState('');
+  const [customMonths, setCustomMonths] = useState('');
+
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const load = useCallback(() => {
-    api.get<ApiResponse<OrderDetail>>(`/orders/${id}`).then((r) => setOrder(r.data)).catch(() => null);
+    api.get<ApiResponse<OrderDetail>>(`/orders/${id}`).then((r) => {
+      setOrder(r.data);
+      setQuotation(r.data.quotation > 0 ? formatMoney(Math.round(Number(r.data.quotation))) : '');
+      const months = r.data.warranty_period_months;
+      if ([3, 6, 12].includes(months)) {
+        setWarrantyOption(String(months));
+      } else if (months > 0) {
+        setWarrantyOption('custom');
+        setCustomMonths(String(months));
+      }
+    }).catch(() => null);
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleStatusUpdate() {
-    if (!newStatus) { setError('Vui lòng chọn trạng thái'); return; }
-    setUpdating(true); setError('');
+  async function handleUpdate() {
+    setUpdating(true); setError(''); setSuccess('');
     try {
-      await api.put(`/orders/${id}/status`, { status: newStatus, notes });
+      // Update quotation & warranty if changed
+      const patchData: Record<string, unknown> = {};
+      const newQuotation = parseMoney(quotation);
+      if (order && newQuotation !== Math.round(Number(order.quotation))) patchData.quotation = newQuotation;
 
+      const selectedMonths = warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0;
+      if (order && selectedMonths > 0 && selectedMonths !== order.warranty_period_months) {
+        patchData.warranty_period_months = selectedMonths;
+      }
+      if (notes.trim()) patchData.notes = notes.trim();
+
+      if (Object.keys(patchData).length > 0) {
+        await api.patch(`/orders/${id}`, patchData);
+      }
+
+      // Update status if selected
+      if (newStatus) {
+        await api.put(`/orders/${id}/status`, { status: newStatus, notes: notes.trim() || undefined });
+      }
+
+      // Upload images
       if (newImages.length > 0) {
         const fd = new FormData();
         newImages.forEach((f) => fd.append('images', f));
@@ -66,7 +118,9 @@ export default function OrderDetailPage() {
       }
 
       setNewStatus(''); setNotes(''); setNewImages([]);
+      setSuccess('Cập nhật thành công');
       load();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
@@ -78,6 +132,9 @@ export default function OrderDetailPage() {
 
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001';
+  const hasChanges = !!(newStatus || notes.trim() || newImages.length > 0 ||
+    parseMoney(quotation) !== Math.round(Number(order.quotation)) ||
+    (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
 
   return (
     <AuthGuard>
@@ -85,6 +142,7 @@ export default function OrderDetailPage() {
         <PageHeader title={order.order_code} onBack={() => router.back()} />
 
         <div className="p-4 space-y-4">
+          {/* Locked order info */}
           <Card>
             <div className="flex justify-between items-start mb-3">
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
@@ -99,16 +157,16 @@ export default function OrderDetailPage() {
               <p><span className="text-gray-500">Thiết bị:</span> {order.device_name}</p>
               {order.serial_imei && <p><span className="text-gray-500">Serial:</span> {order.serial_imei}</p>}
               <p><span className="text-gray-500">Lỗi:</span> {order.fault_description}</p>
-              <p><span className="text-gray-500">Báo giá:</span> <span className="font-semibold text-[#1565C0]">{order.quotation.toLocaleString('vi-VN')}đ</span></p>
               {order.warranty_end_date && (
                 <p><span className="text-gray-500">Bảo hành đến:</span> {new Date(order.warranty_end_date).toLocaleDateString('vi-VN')}</p>
               )}
             </div>
           </Card>
 
+          {/* Existing images (locked) */}
           {order.images.length > 0 && (
             <Card>
-              <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ảnh ({order.images.length})</h3>
+              <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ảnh đã lưu ({order.images.length})</h3>
               <div className="grid grid-cols-3 gap-2">
                 {order.images.map((img) => (
                   <img key={img.id} src={`${API_BASE}/uploads/${img.image_path}`}
@@ -118,20 +176,67 @@ export default function OrderDetailPage() {
             </Card>
           )}
 
+          {/* Editable section — only when not terminal */}
           {!isTerminal && (
-            <Card>
-              <h3 className="font-semibold text-gray-800 mb-3 text-sm">Cập nhật trạng thái</h3>
-              <div className="space-y-3">
-                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]">
-                  <option value="">Chọn trạng thái mới</option>
-                  {ALL_STATUSES.filter((s) => s !== order.status).map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
+            <>
+              {/* Quotation (appendable) */}
+              <Card>
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Báo giá</h3>
+                <div className="relative">
+                  <input type="text" inputMode="numeric" value={quotation}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      setQuotation(digits ? formatMoney(Number(digits)) : '');
+                    }}
+                    placeholder="Nhập báo giá (VNĐ)"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-12" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">đ</span>
+                </div>
+              </Card>
+
+              {/* Warranty duration (appendable) */}
+              <Card>
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Bảo hành</h3>
+                <SegmentedControl
+                  tabs={WARRANTY_MONTHS_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+                  active={warrantyOption}
+                  onChange={setWarrantyOption}
+                />
+                {warrantyOption === 'custom' && (
+                  <div className="mt-3 relative">
+                    <input type="number" value={customMonths} onChange={(e) => setCustomMonths(e.target.value)}
+                      placeholder="Số tháng"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-16" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">tháng</span>
+                  </div>
+                )}
+              </Card>
+
+              {/* Status change */}
+              <Card>
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Cập nhật trạng thái</h3>
+                <div className="space-y-3">
+                  <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]">
+                    <option value="">Giữ nguyên trạng thái</option>
+                    {ALL_STATUSES.filter((s) => s !== order.status).map((s) => (
+                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </div>
+              </Card>
+
+              {/* Notes (appendable) */}
+              <Card>
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ghi chú</h3>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ghi chú (tuỳ chọn)" rows={2}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0] resize-none" />
+                  placeholder="Thêm ghi chú..." rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
+              </Card>
+
+              {/* Image upload (appendable) */}
+              <Card>
+                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Thêm ảnh</h3>
                 <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
                   <Upload size={20} className="mb-2" />
                   <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh` : 'Chọn hình ảnh'}</span>
@@ -139,21 +244,25 @@ export default function OrderDetailPage() {
                     onChange={(e) => setNewImages(Array.from(e.target.files ?? []))}
                     className="hidden" />
                 </label>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-                <button onClick={handleStatusUpdate} disabled={updating}
-                  className="w-full bg-[#1565C0] text-white py-3 rounded-xl font-semibold text-sm disabled:opacity-60">
-                  {updating ? 'Đang cập nhật...' : 'Cập nhật'}
-                </button>
-              </div>
-            </Card>
+              </Card>
+
+              {/* Action */}
+              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              {success && <p className="text-green-600 text-sm text-center">{success}</p>}
+              <button onClick={handleUpdate} disabled={updating || !hasChanges}
+                className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+                {updating ? 'Đang cập nhật...' : 'Lưu thay đổi'}
+              </button>
+            </>
           )}
 
+          {/* Status history (locked, always visible) */}
           <Card>
             <h3 className="font-semibold text-gray-800 mb-3 text-sm">Lịch sử trạng thái</h3>
             <div className="space-y-3">
               {order.history.map((h) => (
                 <div key={h.id} className="flex gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-[#1565C0] mt-1.5 flex-shrink-0" />
+                  <div className="w-2 h-2 rounded-full bg-[#004EAB] mt-1.5 flex-shrink-0" />
                   <div>
                     <p className="text-gray-700">
                       {h.old_status ? `${STATUS_LABELS[h.old_status]} → ` : ''}{STATUS_LABELS[h.new_status] ?? h.new_status}
