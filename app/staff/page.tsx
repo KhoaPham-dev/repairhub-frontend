@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
@@ -44,13 +45,13 @@ export default function StaffPage() {
   if (!isAdmin()) {
     return (
       <AuthGuard>
-        <div>
+        <div className="min-h-screen bg-[#F8F9FB] pb-24">
           <PageHeader title="Nhân viên" />
           <div className="p-4">
-            <Card className="text-center py-8">
+            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100">
               <div className="text-4xl mb-2">🔒</div>
-              <div className="text-gray-600">Chỉ quản trị viên mới có thể truy cập trang này</div>
-            </Card>
+              <div className="text-slate-600 text-sm">Chỉ quản trị viên mới có thể truy cập trang này</div>
+            </div>
           </div>
         </div>
       </AuthGuard>
@@ -59,61 +60,66 @@ export default function StaffPage() {
 
   return (
     <AuthGuard>
-      <div>
-        <PageHeader title="Nhân viên" />
-        <div className="p-4 space-y-4">
-          <div className="flex justify-end">
-            <button onClick={() => setShowForm((p) => !p)}
-              className="bg-[#1565C0] text-white px-4 py-2 rounded-xl text-sm font-medium">
-              {showForm ? 'Huỷ' : '+ Thêm nhân viên'}
+      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+        <PageHeader
+          title="Nhân viên"
+          right={
+            <button
+              onClick={() => setShowForm((p) => !p)}
+              className="w-8 h-8 flex items-center justify-center bg-[#715DF2] text-white rounded-xl"
+            >
+              <Plus size={18} strokeWidth={2.5} />
             </button>
-          </div>
+          }
+        />
 
+        <div className="px-4 pt-3 space-y-3">
           {showForm && (
-            <Card>
-              <h3 className="font-semibold text-gray-800 mb-3">Thêm nhân viên mới</h3>
-              <div className="space-y-3">
-                <input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
-                  placeholder="Tên đăng nhập *" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-                <input value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))}
-                  placeholder="Họ tên *" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-                <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                  placeholder="Mật khẩu *" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]" />
-                <select value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1565C0]">
-                  <option value="TECHNICIAN">Kỹ thuật viên</option>
-                  <option value="ADMIN">Quản trị viên</option>
-                </select>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-                <button onClick={createUser}
-                  className="w-full bg-[#1565C0] text-white py-3 rounded-xl font-semibold text-sm">
-                  Tạo tài khoản
-                </button>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+              <h3 className="font-semibold text-slate-900 text-sm">Thêm nhân viên mới</h3>
+              <input value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))}
+                placeholder="Họ tên *" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#715DF2]" />
+              <input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
+                placeholder="Tên đăng nhập *" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#715DF2]" />
+              <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                placeholder="Mật khẩu *" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#715DF2]" />
+              <div className="flex gap-2">
+                {[['TECHNICIAN', 'Kỹ thuật viên'], ['ADMIN', 'Quản trị viên']].map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setForm((p) => ({ ...p, role: v }))}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${form.role === v ? 'bg-[#715DF2] text-white border-[#715DF2]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                    {l}
+                  </button>
+                ))}
               </div>
-            </Card>
+              {error && <p className="text-red-500 text-xs">{error}</p>}
+              <div className="flex gap-2">
+                <button onClick={() => { setShowForm(false); setError(''); }}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium">Huỷ</button>
+                <button onClick={createUser}
+                  className="flex-1 py-2.5 rounded-xl bg-[#715DF2] text-white text-sm font-semibold">Tạo tài khoản</button>
+              </div>
+            </div>
           )}
 
-          <div className="space-y-3">
-            {users.map((u) => (
-              <Card key={u.id}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-gray-900">{u.full_name}</p>
-                    <p className="text-sm text-gray-500">@{u.username}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {u.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'}
-                    </span>
-                  </div>
-                  {u.id !== currentUser?.id && (
-                    <button onClick={() => toggleUser(u)}
-                      className={`text-xs px-3 py-1.5 rounded-xl border ${u.is_active ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
-                      {u.is_active ? 'Khoá' : 'Mở khoá'}
-                    </button>
-                  )}
+          {users.map((u) => (
+            <Card key={u.id}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-semibold text-slate-900">{u.full_name}</p>
+                  <p className="text-sm text-slate-500">@{u.username}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {u.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'}
+                  </span>
                 </div>
-              </Card>
-            ))}
-          </div>
+                {u.id !== currentUser?.id && (
+                  <button onClick={() => toggleUser(u)}
+                    className={`text-xs px-3 py-1.5 rounded-xl border ${u.is_active ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+                    {u.is_active ? 'Khoá' : 'Mở khoá'}
+                  </button>
+                )}
+              </div>
+            </Card>
+          ))}
         </div>
       </div>
     </AuthGuard>

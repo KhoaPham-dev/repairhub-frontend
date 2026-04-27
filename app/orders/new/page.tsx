@@ -12,7 +12,7 @@ interface Customer { id: string; phone: string; name: string; address: string; t
 interface Branch { id: string; name: string }
 interface WarrantyResult {
   id: string; order_code: string; device_name: string; warranty_end_date: string | null;
-  warranty_status: string; customer_phone: string; customer_name: string;
+  warranty_status: string;
 }
 interface ApiResponse<T> { success: boolean; data: T }
 
@@ -22,7 +22,6 @@ const PRODUCT_TYPES = [
   { value: 'BAO_HANH', label: 'Bảo Hành' },
 ];
 
-const WARRANTY_MONTHS = [3, 6, 12];
 
 interface ProductRow {
   product_type: string;
@@ -30,19 +29,13 @@ interface ProductRow {
   serial_imei: string;
   accessories: string;
   fault_description: string;
-  quotation: string;
-  warranty_period_months: number;
-  warranty_months_custom: string;
-  warranty_months_mode: 'preset' | 'custom';
   images: File[];
 }
 
 function emptyProduct(): ProductRow {
   return {
     product_type: 'SPEAKER', device_name: '', serial_imei: '',
-    accessories: '', fault_description: '', quotation: '',
-    warranty_period_months: 3, warranty_months_mode: 'preset', warranty_months_custom: '',
-    images: [],
+    accessories: '', fault_description: '', images: [],
   };
 }
 
@@ -58,12 +51,17 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Bảo Hành flow
-  const [bhPhone, setBhPhone] = useState('');
   const [bhWarranties, setBhWarranties] = useState<WarrantyResult[]>([]);
   const [bhSearching, setBhSearching] = useState(false);
   const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
-  const [bhBranchId, setBhBranchId] = useState('');
+
+  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
+
+  const hasCustomer = !!(selectedCustomer || (newCustomer.phone.trim() && newCustomer.name.trim()));
+  const allProductsFilled = products.every(
+    (p) => p.device_name.trim() && p.fault_description.trim() && p.images.length > 0,
+  );
+  const canSubmit = !loading && !!branchId && hasCustomer && allProductsFilled;
 
   useEffect(() => {
     api.get<ApiResponse<Branch[]>>('/branches').then((r) => {
@@ -99,32 +97,33 @@ export default function NewOrderPage() {
     setProducts((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function searchBhWarranties() {
-    if (!bhPhone.trim()) return;
+  async function searchBhWarranties(phone: string) {
+    if (!phone.trim()) return;
     setBhSearching(true);
     setBhWarranties([]);
     setSelectedWarranty(null);
     try {
-      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(bhPhone)}`);
+      const r = await api.get<ApiResponse<WarrantyResult[]>>(`/warranty/search?q=${encodeURIComponent(phone)}`);
       setBhWarranties(r.data);
-    } catch {
-      // ignore
-    } finally {
+    } catch { /* ignore */ } finally {
       setBhSearching(false);
     }
   }
 
+  useEffect(() => {
+    if (isBaoHanhMode && customerQuery) searchBhWarranties(customerQuery);
+    if (!isBaoHanhMode) { setBhWarranties([]); setSelectedWarranty(null); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBaoHanhMode]);
+
   async function handleBhSubmit() {
-    if (!selectedWarranty || !bhBranchId) {
-      setError('Vui lòng chọn bảo hành và chi nhánh');
-      return;
-    }
+    if (!selectedWarranty) { setError('Vui lòng chọn đơn bảo hành'); return; }
     setError('');
     setLoading(true);
     try {
       const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
         source_order_id: selectedWarranty.id,
-        branch_id: bhBranchId,
+        branch_id: branchId,
       });
       router.push(`/orders/${r.data.id}`);
     } catch (err) {
@@ -137,13 +136,6 @@ export default function NewOrderPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-
-    // If any product is BAO_HANH type, redirect to BH flow
-    const hasBaoHanh = products.some((p) => p.product_type === 'BAO_HANH');
-    if (hasBaoHanh) {
-      setError('Vui lòng sử dụng luồng Bảo Hành bên dưới');
-      return;
-    }
 
     if (!branchId) { setError('Vui lòng chọn chi nhánh'); return; }
 
@@ -164,10 +156,6 @@ export default function NewOrderPage() {
         serial_imei: p.serial_imei || undefined,
         accessories: p.accessories || undefined,
         fault_description: p.fault_description,
-        quotation: Number(p.quotation) || 0,
-        warranty_period_months: p.warranty_months_mode === 'custom'
-          ? (Number(p.warranty_months_custom) || 3)
-          : p.warranty_period_months,
       }));
 
       let firstOrderId: string;
@@ -210,12 +198,10 @@ export default function NewOrderPage() {
     }
   }
 
-  const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
-
   return (
     <AuthGuard>
       <div className="pb-24 min-h-screen bg-[#F8F9FB]">
-        <PageHeader title="Tạo đơn mới" subtitle="Tạo đơn sửa chữa" onBack={() => router.back()} />
+        <PageHeader title="Tạo đơn mới" subtitle="Tạo đơn sửa chữa" />
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
 
           {/* Branch */}
@@ -301,7 +287,27 @@ export default function NewOrderPage() {
                 onChange={(v) => updateProduct(idx, 'product_type', v)}
               />
 
-              {product.product_type !== 'BAO_HANH' && (
+              {product.product_type === 'BAO_HANH' ? (
+                <div className="space-y-2">
+                  {!customerQuery ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
+                  ) : bhSearching ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
+                  ) : bhWarranties.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
+                  ) : bhWarranties.map((w) => (
+                    <button key={w.id} type="button"
+                      onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
+                      className={`w-full text-left p-4 rounded-xl border text-sm transition-colors ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
+                      <p className="font-semibold text-slate-900">{w.order_code}</p>
+                      <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
+                      {w.warranty_end_date && (
+                        <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
                 <>
                   <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
                     placeholder="Tên thiết bị *" required
@@ -315,36 +321,8 @@ export default function NewOrderPage() {
                   <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
                     placeholder="Mô tả lỗi *" required rows={3}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
-                  <input type="number" value={product.quotation} onChange={(e) => updateProduct(idx, 'quotation', e.target.value)}
-                    placeholder="Báo giá (VNĐ) *" required min="0"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
 
-                  {/* Warranty package */}
-                  <div>
-                    <p className="text-xs text-slate-500 mb-2">Bảo hành</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {WARRANTY_MONTHS.map((m) => (
-                        <button key={m} type="button"
-                          onClick={() => { updateProduct(idx, 'warranty_period_months', m); updateProduct(idx, 'warranty_months_mode', 'preset'); }}
-                          className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'preset' && product.warranty_period_months === m ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                          {m} tháng
-                        </button>
-                      ))}
-                      <button type="button"
-                        onClick={() => updateProduct(idx, 'warranty_months_mode', 'custom')}
-                        className={`px-3 py-2 rounded-xl text-sm font-medium border ${product.warranty_months_mode === 'custom' ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                        Khác
-                      </button>
-                    </div>
-                    {product.warranty_months_mode === 'custom' && (
-                      <input type="number" value={product.warranty_months_custom}
-                        onChange={(e) => updateProduct(idx, 'warranty_months_custom', e.target.value)}
-                        placeholder="Số tháng" min="1"
-                        className="mt-2 w-32 px-4 py-2 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
-                    )}
-                  </div>
-
-                  {/* Images upload inside product card */}
+                  {/* Images */}
                   <div>
                     <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
                     <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
@@ -360,60 +338,6 @@ export default function NewOrderPage() {
             </div>
           ))}
 
-          {/* Bảo Hành flow */}
-          {isBaoHanhMode && (
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
-              <h2 className="font-bold text-slate-900 text-[15px]">Tra cứu bảo hành</h2>
-              <div className="flex gap-2">
-                <input type="tel" value={bhPhone} onChange={(e) => setBhPhone(e.target.value)}
-                  placeholder="Số điện thoại khách hàng"
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]" />
-                <button type="button" onClick={searchBhWarranties} disabled={bhSearching}
-                  className="px-4 py-3 bg-[#004EAB] text-white rounded-xl text-sm font-semibold disabled:opacity-60">
-                  {bhSearching ? '...' : 'Tìm'}
-                </button>
-              </div>
-
-              {bhWarranties.length === 0 && bhPhone && !bhSearching && (
-                <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành</p>
-              )}
-
-              {bhWarranties.map((w) => (
-                <button key={w.id} type="button"
-                  onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
-                  className={`w-full text-left p-4 rounded-xl border text-sm ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
-                  <p className="font-semibold text-slate-900">{w.order_code}</p>
-                  <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
-                  {w.warranty_end_date && (
-                    <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
-                  )}
-                </button>
-              ))}
-
-              {selectedWarranty && (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-2">Chi nhánh tiếp nhận</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {branches.map((b) => (
-                        <button key={b.id} type="button"
-                          onClick={() => setBhBranchId(b.id)}
-                          className={`px-4 py-2.5 rounded-xl text-sm font-medium border ${bhBranchId === b.id ? 'bg-[#004EAB] text-white border-[#004EAB]' : 'bg-white text-slate-600 border-slate-200'}`}>
-                          {b.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <button type="button" onClick={handleBhSubmit} disabled={loading || !bhBranchId}
-                    className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-sm disabled:opacity-60">
-                    {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Add product button */}
           {!isBaoHanhMode && (
             <button type="button" onClick={addProduct}
               className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
@@ -423,8 +347,13 @@ export default function NewOrderPage() {
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          {!isBaoHanhMode && (
-            <button type="submit" disabled={loading}
+          {isBaoHanhMode ? (
+            <button type="button" onClick={handleBhSubmit} disabled={loading || !selectedWarranty}
+              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
+            </button>
+          ) : (
+            <button type="submit" disabled={!canSubmit}
               className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
               {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
             </button>

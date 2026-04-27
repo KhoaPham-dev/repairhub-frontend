@@ -17,6 +17,9 @@ node_modules/
 # vercel
 .vercel
 
+# testing
+/coverage
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

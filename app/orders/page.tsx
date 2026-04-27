@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronRight } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
+import PageHeader from '@/components/PageHeader';
 import { api } from '@/lib/api';
 
 interface Order {
@@ -84,44 +85,40 @@ export default function OrdersPage() {
     <AuthGuard>
       <div className="pb-24">
         {/* Sticky header */}
-        <div className="px-4 pt-12 pb-4 bg-[#F8F9FB] sticky top-0 z-10 w-full mb-2">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Đơn hàng</h1>
-              <p className="text-sm text-slate-500">{orders.length} đơn</p>
+        <div className="sticky top-0 z-10 bg-[#F8F9FB]">
+          <PageHeader title="Đơn hàng" subtitle={`${orders.length} đơn`} />
+          <div className="px-4 pb-3 space-y-2">
+            {/* Search bar */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search size={18} className="text-slate-400" />
+              </div>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm theo tên, SĐT, serial..."
+                className="block w-full pl-11 pr-4 py-3 bg-white rounded-2xl text-sm placeholder:text-slate-400 shadow-sm border border-slate-100 outline-none focus:border-[#004EAB] transition-colors"
+              />
             </div>
-          </div>
 
-          {/* Search bar */}
-          <div className="relative mb-6">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search size={18} className="text-slate-400" />
+            {/* Status tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 shrink-0">Trạng thái</span>
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setStatus(f.key)}
+                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    status === f.key
+                      ? 'bg-white shadow-sm text-slate-900'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo tên, SĐT, serial..."
-              className="block w-full pl-11 pr-4 py-3 bg-white rounded-2xl text-sm placeholder:text-slate-400 shadow-sm border border-slate-100 outline-none focus:border-[#004EAB] transition-colors"
-            />
-          </div>
-
-          {/* Status tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 shrink-0">Trạng thái</span>
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setStatus(f.key)}
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  status === f.key
-                    ? 'bg-white shadow-sm text-slate-900'
-                    : 'text-slate-500'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
           </div>
         </div>
 
