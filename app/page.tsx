@@ -84,22 +84,28 @@ export default function DashboardPage() {
                 <TrendingUp size={12} /> +12%
               </div>
             </div>
-            <div className="flex items-end justify-between h-32 gap-2">
+            {/* Label row */}
+            <div className="flex justify-between gap-2 mb-1">
+              {revenueData.map((bar, i) => (
+                <span key={i} className="flex-1 text-[9px] text-slate-500 text-center truncate">{formatMoney(bar.revenue)}</span>
+              ))}
+            </div>
+            {/* Bar row — h-32 gives bars a definite parent height so % resolves correctly */}
+            <div className="h-32 flex items-end gap-2">
               {revenueData.map((bar, i) => {
                 const barHeightPercent = maxRevenue > 0 ? Math.round((bar.revenue / maxRevenue) * 100) : 0;
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0">
-                    <span className="text-[9px] text-slate-500 leading-none truncate w-full text-center">{formatMoney(bar.revenue)}</span>
-                    <div
-                      className="w-full bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
-                      style={{ height: barHeightPercent > 0 ? `${barHeightPercent}%` : '4px' }}
-                    />
-                  </div>
+                  <div key={i} className="flex-1 bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
+                    style={{ height: barHeightPercent > 0 ? `${barHeightPercent}%` : '4px' }}
+                  />
                 );
               })}
             </div>
-            <div className="flex justify-between mt-3 text-xs text-slate-400">
-              {revenueData.map((bar) => <span key={bar.day}>{bar.day}</span>)}
+            {/* Day label row */}
+            <div className="flex gap-2 mt-2 text-xs text-slate-400">
+              {revenueData.map((bar) => (
+                <span key={bar.day} className="flex-1 text-center">{bar.day}</span>
+              ))}
             </div>
           </div>
         </div>
