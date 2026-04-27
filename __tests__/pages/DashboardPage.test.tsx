@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 // Mock next/navigation (not used directly by dashboard but may be imported transitively)
 jest.mock('next/navigation', () => ({
@@ -55,9 +55,20 @@ jest.mock('@/components/SegmentedControl', () => ({
 
 import DashboardPage from '@/app/page';
 
+const mockRevenueData = [
+  { day: 'T2', revenue: 1000000 },
+  { day: 'T3', revenue: 2000000 },
+  { day: 'T4', revenue: 500000 },
+];
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockGet.mockResolvedValue({ data: { TIEP_NHAN: 5, DA_GIAO: 3, HUY_TRA_MAY: 1 } });
+  mockGet.mockImplementation((url: string) => {
+    if (url.includes('/dashboard/revenue')) {
+      return Promise.resolve({ data: mockRevenueData });
+    }
+    return Promise.resolve({ data: { TIEP_NHAN: 5, DA_GIAO: 3, HUY_TRA_MAY: 1 } });
+  });
 });
 
 describe('DashboardPage', () => {
@@ -115,5 +126,49 @@ describe('DashboardPage', () => {
     // Re-render with null user — should not crash
     render(<DashboardPage />);
     expect(screen.getByTestId('page-header')).toBeInTheDocument();
+  });
+
+  it('clicking a period tab triggers api.get with the correct ?period= param', async () => {
+    render(<DashboardPage />);
+    // Initial render calls with ?period=today
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('?period=today'));
+    });
+
+    jest.clearAllMocks();
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes('/dashboard/revenue')) {
+        return Promise.resolve({ data: mockRevenueData });
+      }
+      return Promise.resolve({ data: { TIEP_NHAN: 2, DA_GIAO: 1, HUY_TRA_MAY: 0 } });
+    });
+
+    fireEvent.click(screen.getByTestId('tab-week'));
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('?period=week'));
+    });
+
+    jest.clearAllMocks();
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes('/dashboard/revenue')) {
+        return Promise.resolve({ data: mockRevenueData });
+      }
+      return Promise.resolve({ data: { TIEP_NHAN: 10, DA_GIAO: 5, HUY_TRA_MAY: 2 } });
+    });
+
+    fireEvent.click(screen.getByTestId('tab-month'));
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('?period=month'));
+    });
+  });
+
+  it('bar chart labels are present in the DOM after render', async () => {
+    render(<DashboardPage />);
+    await waitFor(() => {
+      // formatMoney uses toLocaleString('vi-VN') — 1000000 → '1.000.000'
+      expect(screen.getByText('1.000.000')).toBeInTheDocument();
+      expect(screen.getByText('2.000.000')).toBeInTheDocument();
+      expect(screen.getByText('500.000')).toBeInTheDocument();
+    });
   });
 });

@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 
 interface StatusCounts { [key: string]: number }
+interface RevenueBar { day: string; revenue: number }
 
 const PERIOD_TABS = [
   { label: 'Hôm nay', value: 'today' },
@@ -16,19 +17,25 @@ const PERIOD_TABS = [
   { label: 'Tháng này', value: 'month' },
 ];
 
-const BAR_HEIGHTS = [40, 70, 45, 90, 65, 85, 100];
-const BAR_DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+function formatMoney(value: number): string {
+  return value.toLocaleString('vi-VN');
+}
 
 export default function DashboardPage() {
   const [counts, setCounts] = useState<StatusCounts>({});
   const [period, setPeriod] = useState('today');
+  const [revenueData, setRevenueData] = useState<RevenueBar[]>([]);
   const user = getUser();
 
   useEffect(() => {
-    api.get<{ success: boolean; data: StatusCounts }>('/orders/status-counts')
+    api.get<{ success: boolean; data: StatusCounts }>(`/orders/status-counts?period=${period}`)
       .then((r) => setCounts(r.data))
       .catch(() => null);
-  }, []);
+
+    api.get<{ success: boolean; data: RevenueBar[] }>(`/dashboard/revenue?period=${period}`)
+      .then((r) => setRevenueData(r.data))
+      .catch(() => null);
+  }, [period]);
 
   const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
   const activeTotal = Object.entries(counts)
@@ -37,6 +44,8 @@ export default function DashboardPage() {
   const delivered = counts['DA_GIAO'] ?? 0;
   const cancelled = counts['HUY_TRA_MAY'] ?? 0;
   const newToday = counts['TIEP_NHAN'] ?? 0;
+
+  const maxRevenue = revenueData.length > 0 ? Math.max(...revenueData.map((b) => b.revenue)) : 0;
 
   return (
     <AuthGuard>
@@ -76,16 +85,21 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-end justify-between h-32 gap-2">
-              {BAR_HEIGHTS.map((h, i) => (
-                <div
-                  key={i}
-                  className="flex-1 bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
-                  style={{ height: `${h}%` }}
-                />
-              ))}
+              {revenueData.map((bar, i) => {
+                const barHeightPercent = maxRevenue > 0 ? Math.round((bar.revenue / maxRevenue) * 100) : 0;
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1">
+                    <span className="text-[9px] text-slate-500 leading-none">{formatMoney(bar.revenue)}</span>
+                    <div
+                      className="w-full bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
+                      style={{ height: `${barHeightPercent}%` }}
+                    />
+                  </div>
+                );
+              })}
             </div>
             <div className="flex justify-between mt-3 text-xs text-slate-400">
-              {BAR_DAYS.map((d) => <span key={d}>{d}</span>)}
+              {revenueData.map((bar) => <span key={bar.day}>{bar.day}</span>)}
             </div>
           </div>
         </div>
