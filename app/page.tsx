@@ -88,11 +88,11 @@ export default function DashboardPage() {
               {revenueData.map((bar, i) => {
                 const barHeightPercent = maxRevenue > 0 ? Math.round((bar.revenue / maxRevenue) * 100) : 0;
                 return (
-                  <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1">
-                    <span className="text-[9px] text-slate-500 leading-none">{formatMoney(bar.revenue)}</span>
+                  <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-0">
+                    <span className="text-[9px] text-slate-500 leading-none truncate w-full text-center">{formatMoney(bar.revenue)}</span>
                     <div
                       className="w-full bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
-                      style={{ height: `${barHeightPercent}%` }}
+                      style={{ height: barHeightPercent > 0 ? `${barHeightPercent}%` : '4px' }}
                     />
                   </div>
                 );
