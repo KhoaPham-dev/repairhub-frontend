@@ -125,8 +125,8 @@ export default function OrderDetailPage() {
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001';
   const hasChanges = !!(newStatus || notes.trim() || newImages.length > 0 ||
-    (Number(quotation) || 0) !== order.quotation ||
-    (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== order.warranty_period_months);
+    (Number(quotation) || 0) !== Number(order.quotation) ||
+    (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
 
   return (
     <AuthGuard>
