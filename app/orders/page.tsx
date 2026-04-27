@@ -23,27 +23,27 @@ interface ApiResponse { success: boolean; data: Order[] }
 interface CountResponse { success: boolean; data: Record<string, number> }
 
 const STATUS_LABELS: Record<string, string> = {
-  TIEP_NHAN: 'Tiếp nhận', DANG_KIEM_TRA: 'Đang kiểm tra', BAO_GIA: 'Báo giá',
-  CHO_LINH_KIEN: 'Chờ linh kiện', DANG_SUA_CHUA: 'Đang sửa chữa',
-  KIEM_TRA_LAI: 'Kiểm tra lại', SUA_XONG: 'Sửa xong',
-  DA_GIAO: 'Đã giao', HUY_TRA_MAY: 'Huỷ/Trả máy',
-  DANG_BAO_HANH: 'Đang Bảo Hành',
+  TIEP_NHAN:     'Đã nhận',
+  DANG_KIEM_TRA: 'Kiểm tra',
+  CHO_LINH_KIEN: 'Chờ linh kiện',
+  DANG_SUA_CHUA: 'Đang sửa',
+  SUA_XONG:      'Sửa xong',
+  DA_GIAO:       'Đã giao',
+  HUY_TRA_MAY:   'Huỷ trả máy',
+  DANG_BAO_HANH: 'Đang bảo hành',
 };
 
 const PRIORITY_LABELS: Record<string, string> = { LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' };
 
 const FILTERS = [
   { key: '', label: 'Tất cả' },
-  { key: 'TIEP_NHAN', label: 'Tiếp nhận' },
-  { key: 'DANG_KIEM_TRA', label: 'Đang kiểm tra' },
-  { key: 'BAO_GIA', label: 'Báo giá' },
+  { key: 'TIEP_NHAN', label: 'Đã nhận' },
+  { key: 'DANG_KIEM_TRA', label: 'Kiểm tra' },
   { key: 'CHO_LINH_KIEN', label: 'Chờ linh kiện' },
-  { key: 'DANG_SUA_CHUA', label: 'Đang sửa chữa' },
-  { key: 'KIEM_TRA_LAI', label: 'Kiểm tra lại' },
+  { key: 'DANG_SUA_CHUA', label: 'Đang sửa' },
   { key: 'SUA_XONG', label: 'Sửa xong' },
   { key: 'DA_GIAO', label: 'Đã giao' },
-  { key: 'HUY_TRA_MAY', label: 'Huỷ/Trả máy' },
-  { key: 'DANG_BAO_HANH', label: 'Đang Bảo Hành' },
+  { key: 'HUY_TRA_MAY', label: 'Huỷ trả máy' },
 ];
 
 export default function OrdersPage() {
@@ -148,7 +148,7 @@ export default function OrdersPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                  order.status === 'DA_GIAO' || order.status === 'SUA_XONG' ? 'bg-[#E0F2E9] text-[#1D7F54]' :
+                  order.status === 'DA_GIAO' ? 'bg-[#E0F2E9] text-[#1D7F54]' :
                   order.status === 'HUY_TRA_MAY' ? 'bg-red-50 text-red-600' :
                   order.status === 'DANG_BAO_HANH' ? 'bg-purple-50 text-purple-600' :
                   'bg-[#EAEFFF] text-[#004EAB]'

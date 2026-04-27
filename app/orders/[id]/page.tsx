@@ -23,11 +23,14 @@ interface OrderDetail {
 interface ApiResponse<T> { success: boolean; data: T }
 
 const STATUS_LABELS: Record<string, string> = {
-  TIEP_NHAN: 'Tiếp nhận', DANG_BAO_HANH: 'Đang bảo hành',
-  DANG_KIEM_TRA: 'Đang kiểm tra', BAO_GIA: 'Báo giá',
-  CHO_LINH_KIEN: 'Chờ linh kiện', DANG_SUA_CHUA: 'Đang sửa chữa',
-  KIEM_TRA_LAI: 'Kiểm tra lại', SUA_XONG: 'Sửa xong',
-  DA_GIAO: 'Đã giao', HUY_TRA_MAY: 'Huỷ/Trả máy',
+  TIEP_NHAN:     'Đã nhận',
+  DANG_KIEM_TRA: 'Kiểm tra',
+  CHO_LINH_KIEN: 'Chờ linh kiện',
+  DANG_SUA_CHUA: 'Đang sửa',
+  SUA_XONG:      'Sửa xong',
+  DA_GIAO:       'Đã giao',
+  HUY_TRA_MAY:   'Huỷ trả máy',
+  DANG_BAO_HANH: 'Đang bảo hành',
 };
 
 const ALL_STATUSES = Object.keys(STATUS_LABELS);
