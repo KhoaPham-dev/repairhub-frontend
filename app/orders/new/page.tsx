@@ -201,7 +201,7 @@ export default function NewOrderPage() {
   return (
     <AuthGuard>
       <div className="pb-24 min-h-screen bg-[#F8F9FB]">
-        <PageHeader title="Tạo đơn mới" subtitle="Tạo đơn sửa chữa" onBack={() => router.back()} />
+        <PageHeader title="Tạo đơn mới" subtitle="Tạo đơn sửa chữa" />
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
 
           {/* Branch */}
