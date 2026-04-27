@@ -40,6 +40,14 @@ const WARRANTY_MONTHS_OPTIONS = [
   { value: 'custom', label: 'Khác' },
 ];
 
+function formatMoney(n: number): string {
+  return Math.round(n).toLocaleString('vi-VN');
+}
+
+function parseMoney(s: string): number {
+  return parseInt(s.replace(/\D/g, ''), 10) || 0;
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -60,7 +68,7 @@ export default function OrderDetailPage() {
   const load = useCallback(() => {
     api.get<ApiResponse<OrderDetail>>(`/orders/${id}`).then((r) => {
       setOrder(r.data);
-      setQuotation(r.data.quotation > 0 ? String(r.data.quotation) : '');
+      setQuotation(r.data.quotation > 0 ? formatMoney(Math.round(Number(r.data.quotation))) : '');
       const months = r.data.warranty_period_months;
       if ([3, 6, 12].includes(months)) {
         setWarrantyOption(String(months));
@@ -78,8 +86,8 @@ export default function OrderDetailPage() {
     try {
       // Update quotation & warranty if changed
       const patchData: Record<string, unknown> = {};
-      const newQuotation = Number(quotation) || 0;
-      if (order && newQuotation !== order.quotation) patchData.quotation = newQuotation;
+      const newQuotation = parseMoney(quotation);
+      if (order && newQuotation !== Math.round(Number(order.quotation))) patchData.quotation = newQuotation;
 
       const selectedMonths = warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0;
       if (order && selectedMonths > 0 && selectedMonths !== order.warranty_period_months) {
@@ -125,7 +133,7 @@ export default function OrderDetailPage() {
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001';
   const hasChanges = !!(newStatus || notes.trim() || newImages.length > 0 ||
-    (Number(quotation) || 0) !== Number(order.quotation) ||
+    parseMoney(quotation) !== Math.round(Number(order.quotation)) ||
     (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
 
   return (
@@ -175,7 +183,11 @@ export default function OrderDetailPage() {
               <Card>
                 <h3 className="font-semibold text-gray-800 mb-3 text-sm">Báo giá</h3>
                 <div className="relative">
-                  <input type="number" value={quotation} onChange={(e) => setQuotation(e.target.value)}
+                  <input type="text" inputMode="numeric" value={quotation}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      setQuotation(digits ? formatMoney(Number(digits)) : '');
+                    }}
                     placeholder="Nhập báo giá (VNĐ)"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-12" />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">đ</span>
