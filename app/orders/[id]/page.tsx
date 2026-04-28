@@ -160,7 +160,7 @@ export default function OrderDetailPage() {
             </div>
             <div className="space-y-1 text-sm">
               <p><span className="text-gray-500">Khách:</span> <span className="font-medium">{order.customer_name}</span></p>
-              <p><span className="text-gray-500">SĐT:</span> <a href={`tel:${order.customer_phone}`} className="text-[#004EAB] underline">{order.customer_phone}</a></p>
+              <p><span className="text-gray-500">SĐT:</span> {/^[0-9+() \-]+$/.test(order.customer_phone) ? <a href={`tel:${order.customer_phone}`} className="text-[#004EAB] underline">{order.customer_phone}</a> : <span>{order.customer_phone}</span>}</p>
               <p><span className="text-gray-500">Chi nhánh:</span> {order.branch_name}</p>
               <p><span className="text-gray-500">Thiết bị:</span> {order.device_name}</p>
               {order.serial_imei && <p><span className="text-gray-500">Serial:</span> {order.serial_imei}</p>}
