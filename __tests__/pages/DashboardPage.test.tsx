@@ -8,7 +8,7 @@ jest.mock('next/navigation', () => ({
 
 // Mock lib/auth
 const mockUser = { full_name: 'Khoa Pham' };
-const mockGetUser = jest.fn(() => mockUser);
+const mockGetUser = jest.fn<{ full_name: string } | null, []>(() => mockUser);
 jest.mock('@/lib/auth', () => ({
   getToken: () => 'test-token',
   getUser: () => mockGetUser(),

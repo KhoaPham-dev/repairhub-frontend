@@ -23,12 +23,13 @@ interface ApiResponse { success: boolean; data: Order[] }
 interface CountResponse { success: boolean; data: Record<string, number> }
 
 const STATUS_LABELS: Record<string, string> = {
-  TIEP_NHAN:     'Đã nhận',
+  TIEP_NHAN:     'Tiếp nhận',
   DANG_KIEM_TRA: 'Kiểm tra',
-  CHO_LINH_KIEN: 'Chờ linh kiện',
+  BAO_GIA:       'Báo giá',
   DANG_SUA_CHUA: 'Đang sửa',
   SUA_XONG:      'Sửa xong',
   DA_GIAO:       'Đã giao',
+  TRA_HANG:      'Trả hàng',
   HUY_TRA_MAY:   'Huỷ trả máy',
   DANG_BAO_HANH: 'Đang bảo hành',
 };
@@ -37,12 +38,13 @@ const PRIORITY_LABELS: Record<string, string> = { LOW: 'Thấp', MEDIUM: 'Trung 
 
 const FILTERS = [
   { key: '', label: 'Tất cả' },
-  { key: 'TIEP_NHAN', label: 'Đã nhận' },
+  { key: 'TIEP_NHAN', label: 'Tiếp nhận' },
   { key: 'DANG_KIEM_TRA', label: 'Kiểm tra' },
-  { key: 'CHO_LINH_KIEN', label: 'Chờ linh kiện' },
+  { key: 'BAO_GIA', label: 'Báo giá' },
   { key: 'DANG_SUA_CHUA', label: 'Đang sửa' },
   { key: 'SUA_XONG', label: 'Sửa xong' },
   { key: 'DA_GIAO', label: 'Đã giao' },
+  { key: 'TRA_HANG', label: 'Trả hàng' },
   { key: 'HUY_TRA_MAY', label: 'Huỷ trả máy' },
 ];
 
