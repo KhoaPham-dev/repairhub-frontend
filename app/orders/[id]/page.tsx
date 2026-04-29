@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Upload } from 'lucide-react';
+import { Upload, ChevronDown } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
+import ConfirmModal from '@/components/ConfirmModal';
 import { api } from '@/lib/api';
 
 interface OrderDetail {
@@ -34,7 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
   DANG_BAO_HANH: 'Đang bảo hành',
 };
 
-const ALL_STATUSES = Object.keys(STATUS_LABELS);
+const UPDATABLE_STATUSES = Object.keys(STATUS_LABELS).filter((s) => s !== 'DANG_BAO_HANH');
 const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
 
 const WARRANTY_MONTHS_OPTIONS = [
@@ -65,6 +66,7 @@ export default function OrderDetailPage() {
   const [warrantyOption, setWarrantyOption] = useState('');
   const [customMonths, setCustomMonths] = useState('');
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -85,11 +87,15 @@ export default function OrderDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleUpdate() {
+  function handleUpdate() {
     if (newStatus === 'HUY_TRA_MAY') {
-      const confirmed = window.confirm('Xác nhận huỷ đơn này? Hành động này không thể hoàn tác.');
-      if (!confirmed) return;
+      setConfirmOpen(true);
+      return;
     }
+    doUpdate();
+  }
+
+  async function doUpdate() {
     setUpdating(true); setError(''); setSuccess('');
     try {
       // Update quotation & warranty if changed
@@ -224,15 +230,28 @@ export default function OrderDetailPage() {
               <Card>
                 <h3 className="font-semibold text-gray-800 mb-3 text-sm">Cập nhật trạng thái</h3>
                 <div className="space-y-3">
-                  <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB]">
-                    <option value="">Giữ nguyên trạng thái</option>
-                    {ALL_STATUSES.filter((s) => s !== order.status).map((s) => (
-                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] appearance-none pr-10">
+                      <option value="">Giữ nguyên trạng thái</option>
+                      {UPDATABLE_STATUSES.filter((s) => s !== order.status).map((s) => (
+                        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                  </div>
                 </div>
               </Card>
+
+              {/* TRA_HANG cancel shortcut */}
+              {order.status === 'TRA_HANG' && (
+                <button
+                  onClick={() => { setNewStatus('HUY_TRA_MAY'); setConfirmOpen(true); }}
+                  className="w-full border-2 border-red-500 text-red-600 py-4 rounded-full font-semibold text-base bg-white shadow-sm"
+                >
+                  Huỷ trả máy
+                </button>
+              )}
 
               {/* Notes (appendable) */}
               <Card>
@@ -284,6 +303,14 @@ export default function OrderDetailPage() {
           </Card>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="Huỷ trả máy"
+        message="Xác nhận huỷ đơn này? Hành động này không thể hoàn tác."
+        onConfirm={() => { setConfirmOpen(false); doUpdate(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </AuthGuard>
   );
 }

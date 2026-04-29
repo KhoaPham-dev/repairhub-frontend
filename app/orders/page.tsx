@@ -46,6 +46,7 @@ const FILTERS = [
   { key: 'DA_GIAO', label: 'Đã giao' },
   { key: 'TRA_HANG', label: 'Trả hàng' },
   { key: 'HUY_TRA_MAY', label: 'Huỷ trả máy' },
+  { key: 'DANG_BAO_HANH', label: 'Đang bảo hành' },
 ];
 
 export default function OrdersPage() {
