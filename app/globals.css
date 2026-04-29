@@ -22,3 +22,20 @@ body {
   transition-duration: 150ms;
   transition-timing-function: ease-in-out;
 }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #004EAB;
+  border-radius: 9999px;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #004EAB transparent;
+}
