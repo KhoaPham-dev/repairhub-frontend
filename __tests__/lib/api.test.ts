@@ -11,7 +11,9 @@ const mockGetToken = getToken as jest.MockedFunction<typeof getToken>;
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// lib/api now appends `/api` itself, so the env var is the bare host.
+const API_HOST = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = `${API_HOST}/api`;
 
 function makeResponse(body: unknown, status = 200) {
   return Promise.resolve({
