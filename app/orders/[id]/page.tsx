@@ -35,7 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
   DANG_BAO_HANH: 'Đang bảo hành',
 };
 
-const ALL_STATUSES = Object.keys(STATUS_LABELS);
+const UPDATABLE_STATUSES = Object.keys(STATUS_LABELS).filter((s) => s !== 'DANG_BAO_HANH');
 const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
 
 const WARRANTY_MONTHS_OPTIONS = [
@@ -234,7 +234,7 @@ export default function OrderDetailPage() {
                     <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] appearance-none pr-10">
                       <option value="">Giữ nguyên trạng thái</option>
-                      {ALL_STATUSES.filter((s) => s !== order.status).map((s) => (
+                      {UPDATABLE_STATUSES.filter((s) => s !== order.status).map((s) => (
                         <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                       ))}
                     </select>

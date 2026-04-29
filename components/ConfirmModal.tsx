@@ -20,7 +20,7 @@ export default function ConfirmModal({ open, title, message, onConfirm, onCancel
       />
 
       {/* Modal card */}
-      <div className="relative bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full animate-[fadeScaleIn_150ms_ease-out]">
+      <div className="relative bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full scale-100 opacity-100 transition-all duration-150">
         <h2 className="text-base font-semibold text-gray-900 mb-2">{title}</h2>
         <p className="text-sm text-gray-600 mb-6">{message}</p>
 
