@@ -183,7 +183,7 @@ export default function NewOrderPage() {
         allImages.forEach((img) => fd.append('images', img));
         fd.append('image_type', 'INTAKE');
         const token = localStorage.getItem('token');
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/orders/${firstOrderId}/images`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${firstOrderId}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,

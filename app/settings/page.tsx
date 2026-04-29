@@ -21,7 +21,7 @@ export default function SettingsPage() {
   const [branchForm, setBranchForm] = useState({ name: '', address: '', phone: '', manager_name: '' });
   const [error, setError] = useState('');
   const admin = isAdmin();
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   function loadData() {
     api.get<ApiResponse<Branch[]>>('/branches?include_inactive=true').then((r) => setBranches(r.data)).catch(() => null);
@@ -142,7 +142,7 @@ export default function SettingsPage() {
                       <span className={`text-xs ${log.status === 'SUCCESS' ? 'text-green-600' : 'text-red-500'}`}>
                         {log.status === 'SUCCESS' ? '✓' : '✗'}
                       </span>
-                      <a href={`${API_BASE}/backup/download/${log.filename}`}
+                      <a href={`${API_BASE}/api/backup/download/${log.filename}`}
                         className="text-xs text-[#1565C0]" download>Tải</a>
                     </div>
                   </div>
