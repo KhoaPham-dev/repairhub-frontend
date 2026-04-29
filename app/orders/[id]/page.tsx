@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
+import ConfirmModal from '@/components/ConfirmModal';
 import { api } from '@/lib/api';
 
 interface OrderDetail {
@@ -65,6 +66,7 @@ export default function OrderDetailPage() {
   const [warrantyOption, setWarrantyOption] = useState('');
   const [customMonths, setCustomMonths] = useState('');
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -85,11 +87,15 @@ export default function OrderDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleUpdate() {
+  function handleUpdate() {
     if (newStatus === 'HUY_TRA_MAY') {
-      const confirmed = window.confirm('Xác nhận huỷ đơn này? Hành động này không thể hoàn tác.');
-      if (!confirmed) return;
+      setConfirmOpen(true);
+      return;
     }
+    doUpdate();
+  }
+
+  async function doUpdate() {
     setUpdating(true); setError(''); setSuccess('');
     try {
       // Update quotation & warranty if changed
@@ -284,6 +290,14 @@ export default function OrderDetailPage() {
           </Card>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="Huỷ trả máy"
+        message="Xác nhận huỷ đơn này? Hành động này không thể hoàn tác."
+        onConfirm={() => { setConfirmOpen(false); doUpdate(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </AuthGuard>
   );
 }
