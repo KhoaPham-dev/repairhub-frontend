@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight, ArrowDownNarrowWide, ArrowUpNarrowWide } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
 import PageHeader from '@/components/PageHeader';
 import Spinner from '@/components/Spinner';
@@ -59,13 +59,14 @@ export default function OrdersPage() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const LIMIT = 20;
 
-  const fetchOrders = useCallback(async (q: string, st: string, off: number, append = false) => {
+  const fetchOrders = useCallback(async (q: string, st: string, sort: 'desc' | 'asc', off: number, append = false) => {
     // Show the page spinner whenever we replace the list (initial load OR
-    // filter/search change). Pagination (`append`) keeps the existing list visible.
+    // filter/search/sort change). Pagination (`append`) keeps the existing list visible.
     if (!append) setLoading(true);
-    const params = new URLSearchParams({ limit: String(LIMIT), offset: String(off) });
+    const params = new URLSearchParams({ limit: String(LIMIT), offset: String(off), sort });
     if (q) params.set('search', q);
     if (st) params.set('status', st);
     const r = await api.get<ApiResponse>(`/orders?${params}`).catch(() => null);
@@ -80,14 +81,23 @@ export default function OrdersPage() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => { setOffset(0); fetchOrders(search, status, 0); }, 400);
+    const t = setTimeout(() => { setOffset(0); fetchOrders(search, status, sortDir, 0); }, 400);
     return () => clearTimeout(t);
-  }, [search, status, fetchOrders]);
+  }, [search, status, sortDir, fetchOrders]);
 
   function loadMore() {
     const next = offset + LIMIT;
     setOffset(next);
-    fetchOrders(search, status, next, true);
+    fetchOrders(search, status, sortDir, next, true);
+  }
+
+  // Relative time: "Vừa xong" < 60s; "X giờ trước" < 24h; "X ngày trước" otherwise.
+  function relativeTime(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    if (diffMs < 60_000) return 'Vừa xong';
+    const hours = Math.floor(diffMs / 3_600_000);
+    if (hours < 24) return `${Math.max(1, hours)} giờ trước`;
+    return `${Math.floor(diffMs / 86_400_000)} ngày trước`;
   }
 
   return (
@@ -111,22 +121,35 @@ export default function OrdersPage() {
               />
             </div>
 
-            {/* Status tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 shrink-0">Trạng thái</span>
-              {FILTERS.map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setStatus(f.key)}
-                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    status === f.key
-                      ? 'bg-white shadow-sm text-slate-900'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+            {/* Status tabs + sort toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0 pb-1">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 shrink-0">Trạng thái</span>
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setStatus(f.key)}
+                    className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      status === f.key
+                        ? 'bg-white shadow-sm text-slate-900'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
+                aria-label={sortDir === 'desc' ? 'Sắp xếp mới nhất trước' : 'Sắp xếp cũ nhất trước'}
+                title={sortDir === 'desc' ? 'Mới nhất trước' : 'Cũ nhất trước'}
+                className="shrink-0 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm border border-slate-100 text-slate-600 active:bg-slate-50"
+              >
+                {sortDir === 'desc'
+                  ? <ArrowDownNarrowWide size={18} />
+                  : <ArrowUpNarrowWide size={18} />}
+              </button>
             </div>
           </div>
         </div>
@@ -172,6 +195,9 @@ export default function OrdersPage() {
                     Ưu tiên {PRIORITY_LABELS[order.priority]}
                   </span>
                 )}
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                  {relativeTime(order.created_at)}
+                </span>
               </div>
             </div>
           ))}
