@@ -6,6 +6,7 @@ import { Plus, Search } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
@@ -25,12 +26,17 @@ export default function CustomersPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ phone: '', name: '', address: '', type: 'RETAIL', notes: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
+    setLoading(true);
     const params = new URLSearchParams({ limit: '50' });
     if (search) params.set('search', search);
     if (type) params.set('type', type);
-    api.get<ApiResponse>(`/customers?${params}`).then((r) => setCustomers(r.data)).catch(() => null);
+    api.get<ApiResponse>(`/customers?${params}`)
+      .then((r) => setCustomers(r.data))
+      .catch(() => null)
+      .finally(() => setLoading(false));
   }, [search, type]);
 
   useEffect(() => { const t = setTimeout(load, 350); return () => clearTimeout(t); }, [load]);
@@ -116,7 +122,9 @@ export default function CustomersPage() {
             </div>
           )}
 
-          {customers.length === 0 && !showForm && (
+          {loading && <Spinner />}
+
+          {!loading && customers.length === 0 && !showForm && (
             <div className="text-center py-12 text-slate-400">
               <div className="text-4xl mb-2">👥</div>
               <div className="text-sm">Chưa có khách hàng nào</div>

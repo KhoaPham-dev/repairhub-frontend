@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 import { isAdmin, clearAuth } from '@/lib/auth';
 
@@ -20,14 +21,18 @@ export default function SettingsPage() {
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [branchForm, setBranchForm] = useState({ name: '', address: '', phone: '', manager_name: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const admin = isAdmin();
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   function loadData() {
-    api.get<ApiResponse<Branch[]>>('/branches?include_inactive=true').then((r) => setBranches(r.data)).catch(() => null);
+    const calls: Promise<unknown>[] = [
+      api.get<ApiResponse<Branch[]>>('/branches?include_inactive=true').then((r) => setBranches(r.data)).catch(() => null),
+    ];
     if (admin) {
-      api.get<ApiResponse<{ logs: BackupLog[] }>>('/backup').then((r) => setBackupLogs(r.data.logs)).catch(() => null);
+      calls.push(api.get<ApiResponse<{ logs: BackupLog[] }>>('/backup').then((r) => setBackupLogs(r.data.logs)).catch(() => null));
     }
+    Promise.all(calls).finally(() => setLoading(false));
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,6 +108,7 @@ export default function SettingsPage() {
               </div>
             )}
             <div className="space-y-2">
+              {loading && <Spinner />}
               {branches.map((b) => (
                 <div key={b.id} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                   <div>
