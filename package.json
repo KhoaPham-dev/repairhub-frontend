@@ -16,7 +16,8 @@
     "motion": "^12.38.0",
     "next": "14.2.3",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "yet-another-react-lightbox": "^3.31.0"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
