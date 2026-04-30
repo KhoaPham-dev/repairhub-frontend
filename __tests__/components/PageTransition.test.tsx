@@ -32,14 +32,15 @@ describe('PageTransition', () => {
     expect(screen.getByText('Hello World')).toBeInTheDocument();
   });
 
-  it('wraps content in a div with min-h-screen class', () => {
+  it('wraps content in a div that fills its parent', () => {
     const { container } = render(
       <PageTransition>
         <span>content</span>
       </PageTransition>
     );
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.className).toContain('min-h-screen');
+    // Now h-full (parent layout owns the viewport sizing) — see RH-58.
+    expect(wrapper.className).toContain('h-full');
   });
 
   it('renders on different pathnames without error', () => {

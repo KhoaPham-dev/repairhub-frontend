@@ -121,11 +121,11 @@ export default function NewOrderPage() {
     setError('');
     setLoading(true);
     try {
-      const r = await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
+      await api.post<ApiResponse<{ id: string }>>('/orders/warranty-claim', {
         source_order_id: selectedWarranty.id,
         branch_id: branchId,
       });
-      router.push(`/orders/${r.data.id}`);
+      router.push('/orders');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
@@ -190,7 +190,7 @@ export default function NewOrderPage() {
         });
       }
 
-      router.push(`/orders/${firstOrderId}`);
+      router.push('/orders');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {

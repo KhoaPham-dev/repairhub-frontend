@@ -16,9 +16,10 @@ body {
   overflow-x: hidden;
 }
 
-/* Global transitions */
+/* Global transitions — `opacity` deliberately excluded so it doesn't
+   double-trigger with framer-motion route transitions (RH-56). */
 *, *::before, *::after {
-  transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+  transition-property: color, background-color, border-color, transform, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease-in-out;
 }
