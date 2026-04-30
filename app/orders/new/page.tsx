@@ -190,7 +190,7 @@ export default function NewOrderPage() {
         });
       }
 
-      router.push(`/orders/${firstOrderId}`);
+      router.push('/orders');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
