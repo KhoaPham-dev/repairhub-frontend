@@ -39,7 +39,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 pb-safe z-50 rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+    <nav className="shrink-0 bg-white border-t border-slate-100 pb-safe rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between px-4 py-2 relative">
         <div className="flex w-[40%] justify-between pr-2">
           {LEFT_TABS.map((t) => <NavItem key={t.href} {...t} />)}
