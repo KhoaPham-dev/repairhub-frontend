@@ -250,11 +250,13 @@ describe('NewOrderPage', () => {
     });
   });
 
-  it('image input has capture="environment" attribute', async () => {
+  it('image input does NOT have capture attribute (so OS picker offers gallery — RH-61)', async () => {
     render(<NewOrderPage />);
     await waitFor(() => {
       const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute('capture', 'environment');
+      expect(fileInput).not.toHaveAttribute('capture');
+      expect(fileInput).toHaveAttribute('multiple');
+      expect(fileInput).toHaveAttribute('accept', 'image/*');
     });
   });
 });

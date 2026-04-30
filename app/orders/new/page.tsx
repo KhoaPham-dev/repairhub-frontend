@@ -2,10 +2,11 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload } from 'lucide-react';
+import { Plus, Upload, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
+import ImageThumb from '@/components/ImageThumb';
 import { api } from '@/lib/api';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
@@ -70,14 +71,21 @@ export default function NewOrderPage() {
     }).catch(() => null);
   }, []);
 
+  const [searchLoading, setSearchLoading] = useState(false);
   useEffect(() => {
-    if (customerQuery.length < 2) { setSuggestions([]); return; }
+    // Don't search while a customer is already selected — re-firing would
+    // re-open the dropdown immediately after the operator picked someone (RH-59).
+    if (selectedCustomer) { setSuggestions([]); setSearchLoading(false); return; }
+    if (customerQuery.length < 1) { setSuggestions([]); setSearchLoading(false); return; }
+    setSearchLoading(true);
     const t = setTimeout(() => {
       api.get<ApiResponse<Customer[]>>(`/customers/search?q=${encodeURIComponent(customerQuery)}`)
-        .then((r) => setSuggestions(r.data)).catch(() => null);
+        .then((r) => setSuggestions(r.data))
+        .catch(() => null)
+        .finally(() => setSearchLoading(false));
     }, 300);
     return () => clearTimeout(t);
-  }, [customerQuery]);
+  }, [customerQuery, selectedCustomer]);
 
   function selectCustomer(c: Customer) {
     setSelectedCustomer(c);
@@ -233,9 +241,12 @@ export default function NewOrderPage() {
                 value={customerQuery}
                 onChange={(e) => { setCustomerQuery(e.target.value); setSelectedCustomer(null); setNewCustomer((p) => ({ ...p, phone: e.target.value })); }}
                 placeholder="Số điện thoại *"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]"
+                className="w-full px-4 py-3 pr-10 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]"
                 required
               />
+              {searchLoading && (
+                <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" aria-label="Đang tìm" />
+              )}
               {suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-xl z-10 mt-1 border border-slate-100">
                   {suggestions.map((s) => (
@@ -327,11 +338,29 @@ export default function NewOrderPage() {
                     <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
                     <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
                       <Upload size={20} className="mb-2" />
-                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh` : 'Chọn hình ảnh'}</span>
-                      <input type="file" accept="image/*" multiple capture="environment"
-                        onChange={(e) => updateProduct(idx, 'images', Array.from(e.target.files ?? []))}
+                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
+                      {/* No `capture` attr — that would force camera-only on mobile.
+                          Without it, the OS picker offers Take Photo + Photo Library. */}
+                      <input type="file" accept="image/*" multiple
+                        onChange={(e) => {
+                          const newFiles = Array.from(e.target.files ?? []);
+                          updateProduct(idx, 'images', [...product.images, ...newFiles]);
+                          // Reset value so the same file can be picked again after removal.
+                          e.target.value = '';
+                        }}
                         className="hidden" />
                     </label>
+                    {product.images.length > 0 && (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {product.images.map((file, imgIdx) => (
+                          <ImageThumb
+                            key={`${file.name}-${file.size}-${imgIdx}`}
+                            file={file}
+                            onRemove={() => updateProduct(idx, 'images', product.images.filter((_, i) => i !== imgIdx))}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

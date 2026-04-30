@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 
 interface WarrantyResult {
@@ -56,7 +57,9 @@ export default function WarrantyPage() {
             </button>
           </div>
 
-          {searched && results.length === 0 && (
+          {loading && <Spinner />}
+
+          {!loading && searched && results.length === 0 && (
             <Card className="text-center py-8 text-gray-400">
               <div className="text-4xl mb-2">🔍</div>
               <div>Không tìm thấy kết quả</div>

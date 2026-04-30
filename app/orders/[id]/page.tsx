@@ -8,6 +8,8 @@ import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
 import ConfirmModal from '@/components/ConfirmModal';
+import ImageThumb from '@/components/ImageThumb';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 
 interface OrderDetail {
@@ -142,7 +144,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  if (!order) return <AuthGuard><div className="p-8 text-center text-gray-400">Đang tải...</div></AuthGuard>;
+  if (!order) return <AuthGuard><Spinner /></AuthGuard>;
 
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -266,11 +268,27 @@ export default function OrderDetailPage() {
                 <h3 className="font-semibold text-gray-800 mb-3 text-sm">Thêm ảnh</h3>
                 <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
                   <Upload size={20} className="mb-2" />
-                  <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh` : 'Chọn hình ảnh'}</span>
-                  <input type="file" accept="image/*" multiple capture="environment"
-                    onChange={(e) => setNewImages(Array.from(e.target.files ?? []))}
+                  <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
+                  {/* No `capture` attr — that would force camera-only on mobile.
+                      Without it, the OS picker offers Take Photo + Photo Library. */}
+                  <input type="file" accept="image/*" multiple
+                    onChange={(e) => {
+                      setNewImages((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                      e.target.value = '';
+                    }}
                     className="hidden" />
                 </label>
+                {newImages.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {newImages.map((file, i) => (
+                      <ImageThumb
+                        key={`${file.name}-${file.size}-${i}`}
+                        file={file}
+                        onRemove={() => setNewImages((prev) => prev.filter((_, j) => j !== i))}
+                      />
+                    ))}
+                  </div>
+                )}
               </Card>
 
               {/* Action */}

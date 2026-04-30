@@ -5,6 +5,7 @@ import { TrendingUp } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
 import PageHeader from '@/components/PageHeader';
 import SegmentedControl from '@/components/SegmentedControl';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 
@@ -25,16 +26,20 @@ export default function DashboardPage() {
   const [counts, setCounts] = useState<StatusCounts>({});
   const [period, setPeriod] = useState('today');
   const [revenueData, setRevenueData] = useState<RevenueBar[]>([]);
+  const [loading, setLoading] = useState(true);
   const user = getUser();
 
   useEffect(() => {
-    api.get<{ success: boolean; data: StatusCounts }>(`/orders/status-counts?period=${period}`)
-      .then((r) => setCounts(r.data))
-      .catch(() => null);
-
-    api.get<{ success: boolean; data: RevenueBar[] }>(`/dashboard/revenue?period=${period}`)
-      .then((r) => setRevenueData(r.data))
-      .catch(() => null);
+    let cancelled = false;
+    Promise.all([
+      api.get<{ success: boolean; data: StatusCounts }>(`/orders/status-counts?period=${period}`)
+        .then((r) => { if (!cancelled) setCounts(r.data); })
+        .catch(() => null),
+      api.get<{ success: boolean; data: RevenueBar[] }>(`/dashboard/revenue?period=${period}`)
+        .then((r) => { if (!cancelled) setRevenueData(r.data); })
+        .catch(() => null),
+    ]).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [period]);
 
   const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
@@ -58,6 +63,8 @@ export default function DashboardPage() {
         </div>
 
         <div className="px-4 space-y-4">
+          {loading && <Spinner />}
+          {!loading && (<>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
               <p className="text-sm text-slate-500 mb-2 font-medium">Đang xử lý</p>
@@ -108,6 +115,7 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+          </>)}
         </div>
       </div>
     </AuthGuard>

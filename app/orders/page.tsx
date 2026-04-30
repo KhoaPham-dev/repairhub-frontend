@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, ChevronRight } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
 import PageHeader from '@/components/PageHeader';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 
 interface Order {
@@ -57,6 +58,7 @@ export default function OrdersPage() {
   const [status, setStatus] = useState('');
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
   const LIMIT = 20;
 
   const fetchOrders = useCallback(async (q: string, st: string, off: number, append = false) => {
@@ -64,6 +66,7 @@ export default function OrdersPage() {
     if (q) params.set('search', q);
     if (st) params.set('status', st);
     const r = await api.get<ApiResponse>(`/orders?${params}`).catch(() => null);
+    setLoading(false);
     if (!r) return;
     setOrders((prev) => append ? [...prev, ...r.data] : r.data);
     setHasMore(r.data.length === LIMIT);
@@ -127,7 +130,8 @@ export default function OrdersPage() {
 
         {/* Order list */}
         <div className="px-4 space-y-4">
-          {orders.length === 0 && (
+          {loading && <Spinner />}
+          {!loading && orders.length === 0 && (
             <div className="text-center py-8 text-slate-400">
               <div className="text-4xl mb-2">📋</div>
               <div>Chưa có đơn hàng nào</div>

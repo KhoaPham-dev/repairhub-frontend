@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
+import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 import { isAdmin, getUser } from '@/lib/auth';
 
@@ -16,11 +17,15 @@ export default function StaffPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'TECHNICIAN' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const currentUser = getUser();
 
   function loadUsers() {
     if (!isAdmin()) return;
-    api.get<ApiResponse<User[]>>('/users').then((r) => setUsers(r.data)).catch(() => null);
+    api.get<ApiResponse<User[]>>('/users')
+      .then((r) => setUsers(r.data))
+      .catch(() => null)
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => { loadUsers(); }, []);
@@ -100,6 +105,8 @@ export default function StaffPage() {
               </div>
             </div>
           )}
+
+          {loading && <Spinner />}
 
           {users.map((u) => (
             <Card key={u.id}>
