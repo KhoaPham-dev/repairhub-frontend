@@ -9,6 +9,7 @@ import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
 import ConfirmModal from '@/components/ConfirmModal';
 import ImageThumb from '@/components/ImageThumb';
+import ImageLightbox from '@/components/ImageLightbox';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 
@@ -70,6 +71,8 @@ export default function OrderDetailPage() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  // -1 means lightbox closed; otherwise the index of the saved image to show.
+  const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -184,18 +187,42 @@ export default function OrderDetailPage() {
             </div>
           </Card>
 
-          {/* Existing images (locked) */}
+          {/* Existing images (locked, click to view fullscreen) */}
           {order.images.length > 0 && (
             <Card>
               <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ảnh đã lưu ({order.images.length})</h3>
               <div className="grid grid-cols-3 gap-2">
-                {order.images.map((img) => (
-                  <img key={img.id} src={`${API_BASE}/uploads/${img.image_path}`}
-                    alt={img.image_type} className="w-full h-24 object-cover rounded-lg" />
+                {order.images.map((img, i) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => setLightboxIndex(i)}
+                    className="block w-full h-24 rounded-lg overflow-hidden bg-slate-100 active:opacity-80"
+                    aria-label="Mở ảnh đầy đủ"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`${API_BASE}/uploads/${img.image_path}`}
+                      alt={img.image_type}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
                 ))}
               </div>
             </Card>
           )}
+
+          <ImageLightbox
+            open={lightboxIndex >= 0}
+            index={Math.max(0, lightboxIndex)}
+            onClose={() => setLightboxIndex(-1)}
+            onIndexChange={(i) => setLightboxIndex(i)}
+            images={order.images.map((img) => ({
+              src: `${API_BASE}/uploads/${img.image_path}`,
+              alt: img.image_type,
+              downloadFilename: img.image_path.split('/').pop(),
+            }))}
+          />
 
           {/* Editable section — only when not terminal */}
           {!isTerminal && (
