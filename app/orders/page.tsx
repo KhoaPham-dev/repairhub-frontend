@@ -171,9 +171,7 @@ export default function OrdersPage() {
             >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-sm font-semibold text-slate-900">
-                  {order.order_code}{' '}
-                  <span className="font-normal text-slate-500">nhận ngày {new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
-                  <span className="font-normal text-slate-400"> · {relativeTime(order.created_at)}</span>
+                  {order.order_code} <span className="font-normal text-slate-500">nhận ngày {new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
                 </h3>
               </div>
               <p className="text-sm text-slate-700 mb-1">{order.customer_name} · {order.customer_phone}</p>
@@ -197,6 +195,9 @@ export default function OrdersPage() {
                     Ưu tiên {PRIORITY_LABELS[order.priority]}
                   </span>
                 )}
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                  {relativeTime(order.created_at)}
+                </span>
               </div>
             </div>
           ))}
