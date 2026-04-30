@@ -109,7 +109,12 @@ export default function OrderDetailPage() {
       if (order && selectedMonths > 0 && selectedMonths !== order.warranty_period_months) {
         patchData.warranty_period_months = selectedMonths;
       }
-      if (notes.trim()) patchData.notes = notes.trim();
+      // RH-63: only attach notes to PATCH when there's NO status change.
+      // When status changes, notes go with PUT /:id/status (which records
+      // the same history row). Sending notes via PATCH alongside a status
+      // change used to cause a notes-only PATCH that the BE rejected with
+      // "Không có dữ liệu cập nhật", short-circuiting the rest of the flow.
+      if (notes.trim() && !newStatus) patchData.notes = notes.trim();
 
       if (Object.keys(patchData).length > 0) {
         await api.patch(`/orders/${id}`, patchData);
@@ -273,7 +278,12 @@ export default function OrderDetailPage() {
                       Without it, the OS picker offers Take Photo + Photo Library. */}
                   <input type="file" accept="image/*" multiple
                     onChange={(e) => {
-                      setNewImages((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
+                      // RH-64: capture files synchronously BEFORE the value
+                      // reset — otherwise React's lazy state-updater reads
+                      // an empty FileList (because e.target.value='' clears
+                      // e.target.files) and the state never changes.
+                      const newFiles = Array.from(e.target.files ?? []);
+                      setNewImages((prev) => [...prev, ...newFiles]);
                       e.target.value = '';
                     }}
                     className="hidden" />
