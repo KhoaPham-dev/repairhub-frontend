@@ -29,6 +29,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
+    setLoading(true);
     const params = new URLSearchParams({ limit: '50' });
     if (search) params.set('search', search);
     if (type) params.set('type', type);

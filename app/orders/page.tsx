@@ -62,11 +62,14 @@ export default function OrdersPage() {
   const LIMIT = 20;
 
   const fetchOrders = useCallback(async (q: string, st: string, off: number, append = false) => {
+    // Show the page spinner whenever we replace the list (initial load OR
+    // filter/search change). Pagination (`append`) keeps the existing list visible.
+    if (!append) setLoading(true);
     const params = new URLSearchParams({ limit: String(LIMIT), offset: String(off) });
     if (q) params.set('search', q);
     if (st) params.set('status', st);
     const r = await api.get<ApiResponse>(`/orders?${params}`).catch(() => null);
-    setLoading(false);
+    if (!append) setLoading(false);
     if (!r) return;
     setOrders((prev) => append ? [...prev, ...r.data] : r.data);
     setHasMore(r.data.length === LIMIT);

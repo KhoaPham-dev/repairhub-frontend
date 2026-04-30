@@ -31,6 +31,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     Promise.all([
       api.get<{ success: boolean; data: StatusCounts }>(`/orders/status-counts?period=${period}`)
         .then((r) => { if (!cancelled) setCounts(r.data); })
