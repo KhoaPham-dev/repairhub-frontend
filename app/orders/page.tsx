@@ -122,7 +122,7 @@ export default function OrdersPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm theo tên, SĐT, serial..."
+                placeholder="Tìm theo tên thiết bị, SĐT, serial..."
                 className="block w-full pl-11 pr-4 py-3 bg-white rounded-2xl text-sm placeholder:text-slate-400 shadow-sm border border-slate-100 outline-none focus:border-[#004EAB] transition-colors"
               />
             </div>
@@ -173,7 +173,11 @@ export default function OrdersPage() {
             <div
               key={order.id}
               onClick={() => router.push(`/orders/${order.id}`)}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 active:bg-slate-50 cursor-pointer transition-colors"
+              className={`bg-white rounded-2xl p-4 shadow-sm active:bg-slate-50 cursor-pointer transition-colors ${
+                order.priority === 'HIGH'
+                  ? 'border-2 border-red-500'
+                  : 'border border-slate-100'
+              }`}
             >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-sm font-semibold text-slate-900">
