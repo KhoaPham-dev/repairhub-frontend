@@ -69,16 +69,17 @@ describe('NewOrderPage', () => {
     });
   });
 
-  it('shows Bảo Hành flow when BAO_HANH product type selected', async () => {
+  it('shows Bảo Hành flow (warranty search) when BAO_HANH product type selected', async () => {
     render(<NewOrderPage />);
     await waitFor(() => screen.getByText('Bảo Hành'));
     fireEvent.click(screen.getByText('Bảo Hành'));
+    // With phone empty, the BAO_HANH section prompts the operator to type one.
     await waitFor(() => {
-      expect(screen.getByText('Tra cứu bảo hành')).toBeInTheDocument();
+      expect(screen.getByText('Vui lòng nhập số điện thoại khách hàng ở trên')).toBeInTheDocument();
     });
   });
 
-  it('hides regular fields when BAO_HANH is selected', async () => {
+  it('hides regular product fields when BAO_HANH is selected', async () => {
     render(<NewOrderPage />);
     await waitFor(() => screen.getByText('Bảo Hành'));
     fireEvent.click(screen.getByText('Bảo Hành'));
@@ -87,24 +88,9 @@ describe('NewOrderPage', () => {
     });
   });
 
-  it('shows warranty package selector (3, 6, 12 tháng, Khác)', async () => {
-    render(<NewOrderPage />);
-    await waitFor(() => {
-      expect(screen.getByText('3 tháng')).toBeInTheDocument();
-      expect(screen.getByText('6 tháng')).toBeInTheDocument();
-      expect(screen.getByText('12 tháng')).toBeInTheDocument();
-      expect(screen.getByText('Khác')).toBeInTheDocument();
-    });
-  });
-
-  it('shows custom months input when Khác is clicked', async () => {
-    render(<NewOrderPage />);
-    await waitFor(() => screen.getByText('Khác'));
-    fireEvent.click(screen.getByText('Khác'));
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('Số tháng')).toBeInTheDocument();
-    });
-  });
+  // Note: the warranty package selector (3 / 6 / 12 tháng / Khác) was removed
+  // from new-order — quotation + warranty period are now set on the order
+  // detail page during the SUA_XONG transition. Tests for those moved out.
 
   it('adds a second product row on Thêm sản phẩm click', async () => {
     render(<NewOrderPage />);
@@ -142,12 +128,14 @@ describe('NewOrderPage', () => {
   it('shows error when new customer phone/name missing on submit', async () => {
     render(<NewOrderPage />);
     await waitFor(() => screen.getByText('Tạo đơn hàng'));
+    // Branch must be selected first — otherwise the "Vui lòng chọn chi nhánh"
+    // error fires before reaching the customer-name validation.
+    fireEvent.click(screen.getByText('Chi nhánh 1'));
     // Fill phone but skip name — the JS validation should catch name missing
     fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
-    // Also fill required product fields
+    // Fill required product fields (no quotation field on new-order anymore — RH-57 era)
     fireEvent.change(screen.getByPlaceholderText('Tên thiết bị *'), { target: { value: 'Loa' } });
     fireEvent.change(screen.getByPlaceholderText('Mô tả lỗi *'), { target: { value: 'Hỏng' } });
-    fireEvent.change(screen.getByPlaceholderText('Báo giá (VNĐ) *'), { target: { value: '100' } });
     // Submit form programmatically to bypass HTML5 validation
     const form = document.querySelector('form')!;
     await act(async () => {
@@ -158,7 +146,7 @@ describe('NewOrderPage', () => {
     });
   });
 
-  it('submits single product order and navigates', async () => {
+  it('submits single product order and navigates to /orders list', async () => {
     mockGet.mockResolvedValueOnce({ data: BRANCHES });
     mockPost
       .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
@@ -167,23 +155,24 @@ describe('NewOrderPage', () => {
     render(<NewOrderPage />);
     await waitFor(() => screen.getByPlaceholderText('Số điện thoại *'));
 
+    fireEvent.click(screen.getByText('Chi nhánh 1'));
     fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
     fireEvent.change(screen.getByPlaceholderText('Tên khách hàng *'), { target: { value: 'Nguyễn Văn A' } });
     fireEvent.change(screen.getByPlaceholderText('Tên thiết bị *'), { target: { value: 'Loa JBL' } });
     fireEvent.change(screen.getByPlaceholderText('Mô tả lỗi *'), { target: { value: 'Hỏng loa' } });
-    fireEvent.change(screen.getByPlaceholderText('Báo giá (VNĐ) *'), { target: { value: '500000' } });
 
     const form = document.querySelector('form')!;
     await act(async () => {
       fireEvent.submit(form);
     });
 
+    // RH-57: post-create redirects to the order list, not the detail page.
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/orders/order1');
+      expect(mockPush).toHaveBeenCalledWith('/orders');
     });
   });
 
-  it('submits bulk order (2 products) and navigates to first order', async () => {
+  it('submits bulk order (2 products) and navigates to /orders list', async () => {
     mockGet.mockResolvedValueOnce({ data: BRANCHES });
     mockPost
       .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
@@ -192,6 +181,7 @@ describe('NewOrderPage', () => {
     render(<NewOrderPage />);
     await waitFor(() => screen.getByText('Thêm sản phẩm'));
 
+    fireEvent.click(screen.getByText('Chi nhánh 1'));
     fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
     fireEvent.change(screen.getByPlaceholderText('Tên khách hàng *'), { target: { value: 'Nguyễn Văn A' } });
 
@@ -200,14 +190,11 @@ describe('NewOrderPage', () => {
 
     const deviceInputs = screen.getAllByPlaceholderText('Tên thiết bị *');
     const faultInputs = screen.getAllByPlaceholderText('Mô tả lỗi *');
-    const quotationInputs = screen.getAllByPlaceholderText('Báo giá (VNĐ) *');
 
     fireEvent.change(deviceInputs[0], { target: { value: 'Loa JBL' } });
     fireEvent.change(faultInputs[0], { target: { value: 'Hỏng loa' } });
-    fireEvent.change(quotationInputs[0], { target: { value: '500000' } });
     fireEvent.change(deviceInputs[1], { target: { value: 'Tai nghe Sony' } });
     fireEvent.change(faultInputs[1], { target: { value: 'Đứt dây' } });
-    fireEvent.change(quotationInputs[1], { target: { value: '200000' } });
 
     const form = document.querySelector('form')!;
     await act(async () => {
@@ -215,7 +202,7 @@ describe('NewOrderPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/orders/ord1');
+      expect(mockPush).toHaveBeenCalledWith('/orders');
     });
   });
 
