@@ -56,6 +56,12 @@ export default function NewOrderPage() {
   const [bhSearching, setBhSearching] = useState(false);
   const [selectedWarranty, setSelectedWarranty] = useState<WarrantyResult | null>(null);
 
+  // RH-66: when type is PARTNER, the operator picks from a list of existing
+  // partner accounts instead of searching by phone / creating on the fly.
+  const [partners, setPartners] = useState<Customer[]>([]);
+  const [partnersLoading, setPartnersLoading] = useState(false);
+  const isPartnerMode = newCustomer.type === 'PARTNER';
+
   const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
 
   const hasCustomer = !!(selectedCustomer || (newCustomer.phone.trim() && newCustomer.name.trim()));
@@ -91,6 +97,24 @@ export default function NewOrderPage() {
     setSelectedCustomer(c);
     setCustomerQuery(c.phone);
     setSuggestions([]);
+  }
+
+  // RH-66: refetch the partner list whenever we enter PARTNER mode.
+  useEffect(() => {
+    if (!isPartnerMode) return;
+    setPartnersLoading(true);
+    api.get<ApiResponse<Customer[]>>('/customers?type=PARTNER&limit=50')
+      .then((r) => setPartners(r.data))
+      .catch(() => null)
+      .finally(() => setPartnersLoading(false));
+  }, [isPartnerMode]);
+
+  // Switching customer type (Khách lẻ ↔ Đối tác) — clear any prior selection
+  // so we don't submit a customer of the wrong type.
+  function handleCustomerTypeChange(v: string) {
+    setNewCustomer((p) => ({ ...p, type: v, name: '', address: '', phone: '' }));
+    setSelectedCustomer(null);
+    setCustomerQuery('');
   }
 
   function updateProduct(idx: number, field: keyof ProductRow, value: string | number | File[]) {
@@ -228,46 +252,85 @@ export default function NewOrderPage() {
             <SegmentedControl
               tabs={[{ label: 'Khách lẻ', value: 'RETAIL' }, { label: 'Đối tác', value: 'PARTNER' }]}
               active={newCustomer.type}
-              onChange={(v) => setNewCustomer((p) => ({ ...p, type: v }))}
+              onChange={handleCustomerTypeChange}
             />
           </div>
 
           {/* Customer info */}
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
             <h2 className="font-bold text-slate-900 text-[15px] mb-4">Thông tin khách hàng</h2>
-            <div className="relative">
-              <input
-                type="tel"
-                value={customerQuery}
-                onChange={(e) => { setCustomerQuery(e.target.value); setSelectedCustomer(null); setNewCustomer((p) => ({ ...p, phone: e.target.value })); }}
-                placeholder="Số điện thoại *"
-                className="w-full px-4 py-3 pr-10 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]"
-                required
-              />
-              {searchLoading && (
-                <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" aria-label="Đang tìm" />
-              )}
-              {suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-xl z-10 mt-1 border border-slate-100">
-                  {suggestions.map((s) => (
-                    <button key={s.id} type="button" onClick={() => selectCustomer(s)}
-                      className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                      <span className="font-medium">{s.phone}</span> — {s.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {!selectedCustomer && (
-              <div className="mt-3 space-y-2">
-                <input value={newCustomer.name} onChange={(e) => setNewCustomer((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Tên khách hàng *"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-                <input value={newCustomer.address} onChange={(e) => setNewCustomer((p) => ({ ...p, address: e.target.value }))}
-                  placeholder="Địa chỉ"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
-              </div>
+
+            {/* RH-66: Partner mode — pick from existing PARTNER customers */}
+            {isPartnerMode && !selectedCustomer && (
+              <>
+                {partnersLoading ? (
+                  <div className="flex items-center justify-center py-6 text-slate-400">
+                    <Loader2 size={20} className="animate-spin mr-2" />
+                    <span className="text-sm">Đang tải đối tác...</span>
+                  </div>
+                ) : partners.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-sm">
+                    <p className="mb-2">Chưa có đối tác nào.</p>
+                    <a href="/customers" className="text-[#004EAB] font-medium">Tạo đối tác mới</a>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {partners.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => selectCustomer(p)}
+                        className="w-full text-left p-4 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm transition-colors active:bg-slate-100"
+                      >
+                        <p className="font-semibold text-slate-900">{p.name}</p>
+                        <p className="text-slate-500 text-xs mt-0.5">{p.phone}{p.address ? ` · ${p.address}` : ''}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
+
+            {/* Retail mode — phone search + create-new (existing UI) */}
+            {!isPartnerMode && (
+              <>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={customerQuery}
+                    onChange={(e) => { setCustomerQuery(e.target.value); setSelectedCustomer(null); setNewCustomer((p) => ({ ...p, phone: e.target.value })); }}
+                    placeholder="Số điện thoại *"
+                    className="w-full px-4 py-3 pr-10 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]"
+                    required
+                  />
+                  {searchLoading && (
+                    <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" aria-label="Đang tìm" />
+                  )}
+                  {suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-xl z-10 mt-1 border border-slate-100">
+                      {suggestions.map((s) => (
+                        <button key={s.id} type="button" onClick={() => selectCustomer(s)}
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                          <span className="font-medium">{s.phone}</span> — {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {!selectedCustomer && (
+                  <div className="mt-3 space-y-2">
+                    <input value={newCustomer.name} onChange={(e) => setNewCustomer((p) => ({ ...p, name: e.target.value }))}
+                      placeholder="Tên khách hàng *"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                    <input value={newCustomer.address} onChange={(e) => setNewCustomer((p) => ({ ...p, address: e.target.value }))}
+                      placeholder="Địa chỉ"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Selected customer summary — same for both modes */}
             {selectedCustomer && (
               <div className="mt-2 p-3 bg-blue-50 rounded-xl text-sm">
                 <p className="font-medium text-[#004EAB]">{selectedCustomer.name}</p>
