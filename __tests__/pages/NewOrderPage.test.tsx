@@ -214,6 +214,38 @@ describe('NewOrderPage', () => {
     expect(partnerBtn.className).toContain('bg-[#004EAB]');
   });
 
+  it('selecting Đối tác shows the partner list (RH-66)', async () => {
+    const partnersData = [
+      { id: 'p1', phone: '0900000001', name: 'Acme Corp', address: 'HCM', type: 'PARTNER', notes: '' },
+      { id: 'p2', phone: '0900000002', name: 'Foo Ltd', address: '', type: 'PARTNER', notes: '' },
+    ];
+    mockGet
+      .mockResolvedValueOnce({ data: BRANCHES })          // branches load
+      .mockResolvedValueOnce({ data: partnersData });     // partners load when type=PARTNER
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Đối tác'));
+    fireEvent.click(screen.getByText('Đối tác'));
+
+    // Phone/name/address inputs are NOT rendered in partner mode.
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Số điện thoại *')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Tên khách hàng *')).not.toBeInTheDocument();
+    });
+
+    // The partner list IS rendered.
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+      expect(screen.getByText('Foo Ltd')).toBeInTheDocument();
+    });
+
+    // Tapping a partner selects it; the selected-customer card appears.
+    fireEvent.click(screen.getByText('Acme Corp'));
+    await waitFor(() => {
+      expect(screen.getByText('Xoá chọn')).toBeInTheDocument();
+    });
+  });
+
   it('shows customer search suggestions and allows selection', async () => {
     const customerData = [{ id: 'c1', phone: '0901111111', name: 'Khách Test', address: '', type: 'RETAIL', notes: '' }];
     mockGet
