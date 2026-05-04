@@ -25,7 +25,7 @@ export default function LoginPage() {
       const json = await res.json() as { success: boolean; data?: { token: string; user: unknown }; error?: string };
       if (!json.success) { setError(json.error || 'Đăng nhập thất bại'); return; }
       setAuth(json.data!.token, json.data!.user as Parameters<typeof setAuth>[1]);
-      router.push('/');
+      router.push('/orders');
     } catch {
       setError('Lỗi kết nối. Vui lòng thử lại.');
     } finally {
