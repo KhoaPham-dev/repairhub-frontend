@@ -91,7 +91,7 @@ describe('OrdersPage', () => {
 
   it('renders search input inside sticky header', () => {
     render(<OrdersPage />);
-    const input = screen.getByPlaceholderText('Tìm theo tên, SĐT, serial...');
+    const input = screen.getByPlaceholderText('Tìm theo tên thiết bị, SĐT, serial...');
     expect(input).toBeInTheDocument();
   });
 
