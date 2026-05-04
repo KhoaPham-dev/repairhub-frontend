@@ -15,5 +15,8 @@ module.exports = createJestConfig({
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // ESM-only package; mock to a no-op so tests of pages that import the
+    // lightbox component don't try to parse its ES modules.
+    '^yet-another-react-lightbox(/.*)?$': '<rootDir>/__tests__/__mocks__/yet-another-react-lightbox.ts',
   },
 });

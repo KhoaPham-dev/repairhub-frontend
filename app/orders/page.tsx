@@ -68,7 +68,13 @@ export default function OrdersPage() {
     if (!append) setLoading(true);
     const params = new URLSearchParams({ limit: String(LIMIT), offset: String(off), sort });
     if (q) params.set('search', q);
-    if (st) params.set('status', st);
+    if (st) {
+      params.set('status', st);
+    } else {
+      // "Tất cả" hides terminal orders so the worklist is the active queue.
+      // Operators can still drill into terminal statuses via their tabs.
+      params.set('exclude_status', 'DA_GIAO,HUY_TRA_MAY');
+    }
     const r = await api.get<ApiResponse>(`/orders?${params}`).catch(() => null);
     if (!append) setLoading(false);
     if (!r) return;
