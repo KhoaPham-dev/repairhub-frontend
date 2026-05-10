@@ -28,33 +28,6 @@ export default function SettingsPage() {
         <PageHeader title="Cài đặt" />
 
         <div className="px-4 pt-2 space-y-5">
-          {/* Account section */}
-          <section>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Tài khoản</p>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-50">
-              <button
-                onClick={() => router.push('/settings/change-password')}
-                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <KeyRound size={16} className="text-blue-600" />
-                </div>
-                <span className="flex-1 text-left text-sm font-medium text-slate-900">Đổi mật khẩu</span>
-                <ChevronRight size={16} className="text-slate-300" />
-              </button>
-
-              <button
-                onClick={() => setLogoutOpen(true)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-red-50 transition-colors"
-              >
-                <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <LogOut size={16} className="text-red-500" />
-                </div>
-                <span className="flex-1 text-left text-sm font-medium text-red-500">Đăng xuất</span>
-              </button>
-            </div>
-          </section>
-
           {/* Admin-only section */}
           {admin && (
             <section>
@@ -95,6 +68,33 @@ export default function SettingsPage() {
               </div>
             </section>
           )}
+
+          {/* Account section */}
+          <section>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Tài khoản</p>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-50">
+              <button
+                onClick={() => router.push('/settings/change-password')}
+                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <KeyRound size={16} className="text-blue-600" />
+                </div>
+                <span className="flex-1 text-left text-sm font-medium text-slate-900">Đổi mật khẩu</span>
+                <ChevronRight size={16} className="text-slate-300" />
+              </button>
+
+              <button
+                onClick={() => setLogoutOpen(true)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-red-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                  <LogOut size={16} className="text-red-500" />
+                </div>
+                <span className="flex-1 text-left text-sm font-medium text-red-500">Đăng xuất</span>
+              </button>
+            </div>
+          </section>
         </div>
 
         <ConfirmModal
