@@ -184,6 +184,9 @@ export default function OrderDetailPage() {
               {order.warranty_end_date && (
                 <p><span className="text-gray-500">Bảo hành đến:</span> {new Date(order.warranty_end_date).toLocaleDateString('vi-VN')}</p>
               )}
+              {isTerminal && (
+                <p><span className="text-gray-500">Báo giá:</span> {Number(order.quotation) > 0 ? `${Math.round(Number(order.quotation)).toLocaleString('vi-VN')} đ` : 'Chưa có'}</p>
+              )}
             </div>
           </Card>
 
