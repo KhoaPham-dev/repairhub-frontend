@@ -174,4 +174,20 @@ describe('OrderDetailPage', () => {
       expect(screen.getByText('Lịch sử trạng thái')).toBeInTheDocument();
     });
   });
+
+  it('pre-fills quotation input with significant digits (server value / 1000) on load', async () => {
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, quotation: 500000 } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Nhập báo giá (VNĐ)') as HTMLInputElement;
+      expect(input.value).toBe('500');
+    });
+  });
+
+  it('shows .000 đ suffix in quotation input area', async () => {
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('.000 đ')).toBeInTheDocument();
+    });
+  });
 });
