@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, ChevronRight, ArrowDownNarrowWide, ArrowUpNarrowWide, Loader2 } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
 import PageHeader from '@/components/PageHeader';
@@ -53,17 +53,19 @@ const FILTERS = [
 
 const LIMIT = 20;
 
-export default function OrdersPage() {
+function OrdersPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+  const [search, setSearch] = useState(searchParams.get('search') ?? '');
+  const [status, setStatus] = useState(searchParams.get('status') ?? '');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>((searchParams.get('sort') as 'asc' | 'desc') ?? 'desc');
 
   // Debounced values used as fetch deps
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [debouncedStatus, setDebouncedStatus] = useState('');
-  const [debouncedSort, setDebouncedSort] = useState<'desc' | 'asc'>('desc');
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [debouncedStatus, setDebouncedStatus] = useState(status);
+  const [debouncedSort, setDebouncedSort] = useState<'desc' | 'asc'>(sortDir);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
@@ -72,6 +74,16 @@ export default function OrdersPage() {
 
   useEffect(() => { setDebouncedStatus(status); }, [status]);
   useEffect(() => { setDebouncedSort(sortDir); }, [sortDir]);
+
+  // Sync filter state to URL (throttled via debounced values)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (debouncedStatus) params.set('status', debouncedStatus);
+    if (debouncedSort !== 'desc') params.set('sort', debouncedSort);
+    const qs = params.toString();
+    router.replace('/orders' + (qs ? '?' + qs : ''));
+  }, [debouncedSearch, debouncedStatus, debouncedSort, router]);
 
   const fetchPage = useCallback(async (page: number): Promise<Order[]> => {
     const params = new URLSearchParams({
@@ -224,5 +236,13 @@ export default function OrdersPage() {
         </div>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense>
+      <OrdersPageInner />
+    </Suspense>
   );
 }

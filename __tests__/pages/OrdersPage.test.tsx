@@ -14,8 +14,11 @@ Object.defineProperty(window, 'IntersectionObserver', {
 
 // Mock next/navigation
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+const mockSearchParams = new URLSearchParams();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 // Mock lib/auth
@@ -76,6 +79,10 @@ const MOCK_ORDERS = [
 beforeEach(() => {
   jest.clearAllMocks();
   mockGet.mockResolvedValue({ data: MOCK_ORDERS });
+  // Reset search params to empty defaults between tests
+  mockSearchParams.delete('search');
+  mockSearchParams.delete('status');
+  mockSearchParams.delete('sort');
 });
 
 describe('OrdersPage', () => {
@@ -157,5 +164,27 @@ describe('OrdersPage', () => {
     render(<OrdersPage />);
     await waitFor(() => screen.getByText('Nguyễn Văn A · 0901234567'));
     expect(screen.queryByText('Tải thêm')).toBeNull();
+  });
+
+  it('initializes search input from URL search param', async () => {
+    mockSearchParams.set('search', 'JBL');
+    render(<OrdersPage />);
+    const input = screen.getByPlaceholderText('Tìm theo tên thiết bị, SĐT, serial...') as HTMLInputElement;
+    expect(input.value).toBe('JBL');
+  });
+
+  it('initializes status filter from URL status param', async () => {
+    mockSearchParams.set('status', 'DA_GIAO');
+    render(<OrdersPage />);
+    // The "Đã giao" filter button should appear active (selected)
+    const daGiaoBtn = screen.getByRole('button', { name: 'Đã giao' });
+    expect(daGiaoBtn).toHaveClass('bg-white');
+  });
+
+  it('initializes sort direction from URL sort param', async () => {
+    mockSearchParams.set('sort', 'asc');
+    render(<OrdersPage />);
+    // Sort button aria-label reflects asc direction
+    expect(screen.getByLabelText('Sắp xếp cũ nhất trước')).toBeInTheDocument();
   });
 });

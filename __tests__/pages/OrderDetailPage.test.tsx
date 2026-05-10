@@ -150,6 +150,24 @@ describe('OrderDetailPage', () => {
     });
   });
 
+  it('shows Báo giá read-only in locked card for terminal order DA_GIAO', async () => {
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, status: 'DA_GIAO', quotation: 500000 } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Báo giá:')).toBeInTheDocument();
+      expect(screen.getByText('500.000 đ')).toBeInTheDocument();
+    });
+  });
+
+  it('shows Chưa có for terminal order with quotation 0', async () => {
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, status: 'HUY_TRA_MAY', quotation: 0 } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Báo giá:')).toBeInTheDocument();
+      expect(screen.getByText('Chưa có')).toBeInTheDocument();
+    });
+  });
+
   it('shows history section', async () => {
     render(<OrderDetailPage />);
     await waitFor(() => {
