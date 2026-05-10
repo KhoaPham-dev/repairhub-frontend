@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BarChart2, ChevronRight, KeyRound, LogOut, Users } from 'lucide-react';
+import { BarChart2, ChevronRight, FileSpreadsheet, KeyRound, LogOut, Users } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -79,6 +79,17 @@ export default function SettingsPage() {
                     <BarChart2 size={16} className="text-green-600" />
                   </div>
                   <span className="flex-1 text-left text-sm font-medium text-slate-900">Báo cáo doanh thu</span>
+                  <ChevronRight size={16} className="text-slate-300" />
+                </button>
+
+                <button
+                  onClick={() => router.push('/settings/reports/partner')}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                    <FileSpreadsheet size={16} className="text-orange-600" />
+                  </div>
+                  <span className="flex-1 text-left text-sm font-medium text-slate-900">Báo cáo đối tác</span>
                   <ChevronRight size={16} className="text-slate-300" />
                 </button>
               </div>
