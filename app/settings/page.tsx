@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, KeyRound, LogOut, Users } from 'lucide-react';
+import { BarChart2, ChevronRight, KeyRound, LogOut, Users } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -59,7 +59,7 @@ export default function SettingsPage() {
           {admin && (
             <section>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Quản trị</p>
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-50">
                 <button
                   onClick={() => router.push('/settings/staff')}
                   className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
@@ -68,6 +68,17 @@ export default function SettingsPage() {
                     <Users size={16} className="text-purple-600" />
                   </div>
                   <span className="flex-1 text-left text-sm font-medium text-slate-900">Quản lý nhân viên</span>
+                  <ChevronRight size={16} className="text-slate-300" />
+                </button>
+
+                <button
+                  onClick={() => router.push('/settings/reports')}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                    <BarChart2 size={16} className="text-green-600" />
+                  </div>
+                  <span className="flex-1 text-left text-sm font-medium text-slate-900">Báo cáo doanh thu</span>
                   <ChevronRight size={16} className="text-slate-300" />
                 </button>
               </div>
