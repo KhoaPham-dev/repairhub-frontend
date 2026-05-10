@@ -106,7 +106,7 @@ export default function ReportsPage() {
       return;
     }
     loadReports();
-  }, []);
+  }, [loadReports, router]);
 
   async function handleGenerate() {
     setGenerating(true);

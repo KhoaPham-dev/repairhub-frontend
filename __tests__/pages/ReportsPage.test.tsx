@@ -4,8 +4,9 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 // Mock next/navigation
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+const mockRouter = { push: mockPush, replace: mockReplace };
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush, replace: mockReplace }),
+  useRouter: () => mockRouter,
 }));
 
 // Mock lib/auth
