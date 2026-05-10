@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
@@ -10,11 +10,16 @@ import { getUser } from '@/lib/auth';
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetUserId = searchParams.get('userId');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const isChangingOther = !!targetUserId;
+  const backPath = isChangingOther ? '/settings/staff' : '/settings';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,19 +31,21 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    const user = getUser();
-    if (!user) {
+    const currentUser = getUser();
+    if (!currentUser) {
       setError('Không tìm thấy thông tin người dùng');
       return;
     }
 
+    const userId = targetUserId ?? currentUser.id;
+
     setSaving(true);
     try {
-      await api.patch(`/users/${user.id}/password`, { newPassword: password });
+      await api.patch(`/users/${userId}/password`, { newPassword: password });
       setSuccess('Đổi mật khẩu thành công');
       setPassword('');
       setTimeout(() => {
-        router.push('/settings');
+        router.push(backPath);
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
@@ -50,7 +57,7 @@ export default function ChangePasswordPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-[#F8F9FB] pb-24">
-        <PageHeader title="Đổi mật khẩu" onBack={() => router.push('/settings')} />
+        <PageHeader title="Đổi mật khẩu" onBack={() => router.push(backPath)} />
 
         <div className="px-4 pt-4">
           <form onSubmit={handleSubmit} className="space-y-4">

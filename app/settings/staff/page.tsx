@@ -113,12 +113,20 @@ export default function StaffSettingsPage() {
                     {u.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'}
                   </span>
                 </div>
-                {u.id !== currentUser?.id && (
-                  <button onClick={() => toggleUser(u)}
-                    className={`text-xs px-3 py-1.5 rounded-xl border ${u.is_active ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
-                    {u.is_active ? 'Khoá' : 'Mở khoá'}
+                <div className="flex flex-col gap-1.5 items-end">
+                  <button
+                    onClick={() => router.push(`/settings/change-password?userId=${u.id}`)}
+                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600"
+                  >
+                    Đổi mật khẩu
                   </button>
-                )}
+                  {u.id !== currentUser?.id && (
+                    <button onClick={() => toggleUser(u)}
+                      className={`text-xs px-3 py-1.5 rounded-xl border ${u.is_active ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+                      {u.is_active ? 'Khoá' : 'Mở khoá'}
+                    </button>
+                  )}
+                </div>
               </div>
             </Card>
           ))}
