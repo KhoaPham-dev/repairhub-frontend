@@ -56,6 +56,7 @@ function computeDates(preset: DatePreset, customStart: string, customEnd: string
 
 export default function PartnerReportPage() {
   const router = useRouter();
+  const [authed, setAuthed] = useState(false);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [datePreset, setDatePreset] = useState<DatePreset>('month');
@@ -64,16 +65,23 @@ export default function PartnerReportPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  function loadPartners() {
+    api
+      .get<ApiListResponse>('/customers?type=PARTNER')
+      .then((r) => setPartners(r.data))
+      .catch(() => null);
+  }
+
   useEffect(() => {
     if (!isAdmin()) {
       router.replace('/settings');
       return;
     }
-    api
-      .get<ApiListResponse>('/customers?type=PARTNER')
-      .then((r) => setPartners(r.data))
-      .catch(() => null);
+    setAuthed(true);
+    loadPartners();
   }, [router]);
+
+  if (!authed) return null;
 
   const isDownloadDisabled = (): boolean => {
     if (!selectedPartnerId) return true;
