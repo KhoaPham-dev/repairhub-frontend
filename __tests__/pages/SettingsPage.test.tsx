@@ -88,6 +88,18 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Quản lý nhân viên')).toBeInTheDocument();
   });
 
+  it('does NOT render Báo cáo doanh thu for non-admin', () => {
+    mockIsAdmin.mockReturnValue(false);
+    render(<SettingsPage />);
+    expect(screen.queryByText('Báo cáo doanh thu')).toBeNull();
+  });
+
+  it('renders Báo cáo doanh thu for admin', () => {
+    mockIsAdmin.mockReturnValue(true);
+    render(<SettingsPage />);
+    expect(screen.getByText('Báo cáo doanh thu')).toBeInTheDocument();
+  });
+
   it('navigates to /settings/change-password when Đổi mật khẩu is clicked', () => {
     mockIsAdmin.mockReturnValue(false);
     render(<SettingsPage />);
@@ -100,6 +112,13 @@ describe('SettingsPage', () => {
     render(<SettingsPage />);
     fireEvent.click(screen.getByText('Quản lý nhân viên'));
     expect(mockPush).toHaveBeenCalledWith('/settings/staff');
+  });
+
+  it('navigates to /settings/reports when Báo cáo doanh thu is clicked (admin)', () => {
+    mockIsAdmin.mockReturnValue(true);
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByText('Báo cáo doanh thu'));
+    expect(mockPush).toHaveBeenCalledWith('/settings/reports');
   });
 
   it('opens confirm dialog when Đăng xuất is clicked', () => {
