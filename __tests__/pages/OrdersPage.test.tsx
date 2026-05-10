@@ -1,6 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
+// Mock IntersectionObserver (used by useInfiniteScroll)
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Object.defineProperty(window, 'IntersectionObserver', {
+  writable: true,
+  value: jest.fn().mockImplementation(() => new MockIntersectionObserver()),
+});
+
 // Mock next/navigation
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -139,5 +150,12 @@ describe('OrdersPage', () => {
     expect(input).toBeInTheDocument();
     const statusLabel = stickyDiv!.querySelector('span.text-slate-400');
     expect(statusLabel).toBeInTheDocument();
+  });
+
+  it('does not render a Tải thêm button (infinite scroll replaces it)', async () => {
+    mockGet.mockResolvedValue({ data: MOCK_ORDERS });
+    render(<OrdersPage />);
+    await waitFor(() => screen.getByText('Nguyễn Văn A · 0901234567'));
+    expect(screen.queryByText('Tải thêm')).toBeNull();
   });
 });

@@ -26,6 +26,17 @@ describe('ConfirmModal', () => {
     expect(screen.getByText('Test message')).toBeInTheDocument();
   });
 
+  it('shows default confirm label "Xác nhận" when no confirmLabel prop', () => {
+    render(<ConfirmModal {...defaultProps} />);
+    expect(screen.getByText('Xác nhận')).toBeInTheDocument();
+  });
+
+  it('shows custom confirmLabel when provided', () => {
+    render(<ConfirmModal {...defaultProps} confirmLabel="Đăng xuất" />);
+    expect(screen.getByText('Đăng xuất')).toBeInTheDocument();
+    expect(screen.queryByText('Xác nhận')).toBeNull();
+  });
+
   it('calls onConfirm when confirm button is clicked', () => {
     render(<ConfirmModal {...defaultProps} />);
     fireEvent.click(screen.getByText('Xác nhận'));
@@ -47,5 +58,11 @@ describe('ConfirmModal', () => {
     expect(backdrop).not.toBeNull();
     fireEvent.click(backdrop!);
     expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onConfirm with custom label', () => {
+    render(<ConfirmModal {...defaultProps} confirmLabel="Đăng xuất" />);
+    fireEvent.click(screen.getByText('Đăng xuất'));
+    expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
   });
 });

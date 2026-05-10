@@ -20,20 +20,24 @@ describe('BottomNav', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the four nav tab labels', () => {
+  it('renders four nav tab labels including Cài đặt', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
     expect(screen.getByText('Tổng quan')).toBeInTheDocument();
     expect(screen.getByText('Đơn hàng')).toBeInTheDocument();
     expect(screen.getByText('Khách hàng')).toBeInTheDocument();
-    expect(screen.getByText('Nhân viên')).toBeInTheDocument();
+    expect(screen.getByText('Cài đặt')).toBeInTheDocument();
+  });
+
+  it('does not render the old Nhân viên tab', () => {
+    mockUsePathname.mockReturnValue('/');
+    render(<BottomNav />);
+    expect(screen.queryByText('Nhân viên')).toBeNull();
   });
 
   it('renders center FAB link to /orders/new', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
-    const fabLink = screen.getByRole('link', { name: '' });
-    // FAB is an <a href="/orders/new"> with no visible text, only an icon
     const newOrderLinks = screen.getAllByRole('link').filter((l) => l.getAttribute('href') === '/orders/new');
     expect(newOrderLinks.length).toBeGreaterThan(0);
   });
@@ -76,6 +80,20 @@ describe('BottomNav', () => {
     expect(span.className).toContain('text-[#715DF2]');
   });
 
+  it('applies active purple color to settings tab on /settings', () => {
+    mockUsePathname.mockReturnValue('/settings');
+    render(<BottomNav />);
+    const span = screen.getByText('Cài đặt');
+    expect(span.className).toContain('text-[#715DF2]');
+  });
+
+  it('applies active purple color to settings tab on /settings/staff (sub-route)', () => {
+    mockUsePathname.mockReturnValue('/settings/staff');
+    render(<BottomNav />);
+    const span = screen.getByText('Cài đặt');
+    expect(span.className).toContain('text-[#715DF2]');
+  });
+
   it('applies inactive slate color to non-active tab', () => {
     mockUsePathname.mockReturnValue('/orders');
     render(<BottomNav />);
@@ -83,7 +101,7 @@ describe('BottomNav', () => {
     expect(span.className).toContain('text-slate-400');
   });
 
-  it('renders nav links with correct hrefs', () => {
+  it('renders nav links with correct hrefs including /settings', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
     const links = screen.getAllByRole('link');
@@ -91,6 +109,17 @@ describe('BottomNav', () => {
     expect(hrefs).toContain('/');
     expect(hrefs).toContain('/orders');
     expect(hrefs).toContain('/customers');
-    expect(hrefs).toContain('/staff');
+    expect(hrefs).toContain('/settings');
+    expect(hrefs).not.toContain('/staff');
+  });
+
+  it('renders a <nav> element as the root', () => {
+    // The safe-area-inset-bottom padding is applied via an inline style prop on the <nav>.
+    // jsdom does not implement CSS env() so the value is dropped in tests,
+    // but the implementation is verified by code review of BottomNav.tsx.
+    mockUsePathname.mockReturnValue('/');
+    const { container } = render(<BottomNav />);
+    const nav = container.querySelector('nav');
+    expect(nav).not.toBeNull();
   });
 });

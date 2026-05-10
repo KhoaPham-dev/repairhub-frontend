@@ -4,11 +4,12 @@ interface ConfirmModalProps {
   open: boolean;
   title: string;
   message: string;
+  confirmLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export default function ConfirmModal({ open, title, message, onConfirm, onCancel }: ConfirmModalProps) {
+export default function ConfirmModal({ open, title, message, confirmLabel = 'Xác nhận', onConfirm, onCancel }: ConfirmModalProps) {
   if (!open) return null;
 
   return (
@@ -29,7 +30,7 @@ export default function ConfirmModal({ open, title, message, onConfirm, onCancel
             onClick={onConfirm}
             className="w-full bg-red-600 text-white rounded-full py-3 font-semibold text-sm"
           >
-            Xác nhận
+            {confirmLabel}
           </button>
           <button
             onClick={onCancel}

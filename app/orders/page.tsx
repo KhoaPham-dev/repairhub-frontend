@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronRight, ArrowDownNarrowWide, ArrowUpNarrowWide } from 'lucide-react';
+import { Search, ChevronRight, ArrowDownNarrowWide, ArrowUpNarrowWide, Loader2 } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
 import PageHeader from '@/components/PageHeader';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Order {
   id: string;
@@ -50,52 +51,52 @@ const FILTERS = [
   { key: 'DANG_BAO_HANH', label: 'Đang bảo hành' },
 ];
 
+const LIMIT = 20;
+
 export default function OrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
-  const LIMIT = 20;
 
-  const fetchOrders = useCallback(async (q: string, st: string, sort: 'desc' | 'asc', off: number, append = false) => {
-    // Show the page spinner whenever we replace the list (initial load OR
-    // filter/search/sort change). Pagination (`append`) keeps the existing list visible.
-    if (!append) setLoading(true);
-    const params = new URLSearchParams({ limit: String(LIMIT), offset: String(off), sort });
-    if (q) params.set('search', q);
-    if (st) {
-      params.set('status', st);
+  // Debounced values used as fetch deps
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedStatus, setDebouncedStatus] = useState('');
+  const [debouncedSort, setDebouncedSort] = useState<'desc' | 'asc'>('desc');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setDebouncedStatus(status); }, [status]);
+  useEffect(() => { setDebouncedSort(sortDir); }, [sortDir]);
+
+  const fetchPage = useCallback(async (page: number): Promise<Order[]> => {
+    const params = new URLSearchParams({
+      limit: String(LIMIT),
+      offset: String(page * LIMIT),
+      sort: debouncedSort,
+    });
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (debouncedStatus) {
+      params.set('status', debouncedStatus);
     } else {
-      // "Tất cả" hides terminal orders so the worklist is the active queue.
-      // Operators can still drill into terminal statuses via their tabs.
       params.set('exclude_status', 'DA_GIAO,HUY_TRA_MAY');
     }
     const r = await api.get<ApiResponse>(`/orders?${params}`).catch(() => null);
-    if (!append) setLoading(false);
-    if (!r) return;
-    setOrders((prev) => append ? [...prev, ...r.data] : r.data);
-    setHasMore(r.data.length === LIMIT);
-  }, []);
+    return r?.data ?? [];
+  }, [debouncedSearch, debouncedStatus, debouncedSort]);
+
+  const { items: orders, loading, hasMore, sentinelRef } = useInfiniteScroll<Order>({
+    fetchPage,
+    pageSize: LIMIT,
+  });
 
   useEffect(() => {
     api.get<CountResponse>('/orders/status-counts').then((r) => setCounts(r.data)).catch(() => null);
   }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => { setOffset(0); fetchOrders(search, status, sortDir, 0); }, 400);
-    return () => clearTimeout(t);
-  }, [search, status, sortDir, fetchOrders]);
-
-  function loadMore() {
-    const next = offset + LIMIT;
-    setOffset(next);
-    fetchOrders(search, status, sortDir, next, true);
-  }
 
   // Relative time: "Vừa xong" < 60s; "X giờ trước" < 24h; "X ngày trước" otherwise.
   function relativeTime(iso: string): string {
@@ -162,7 +163,7 @@ export default function OrdersPage() {
 
         {/* Order list */}
         <div className="px-4 space-y-4">
-          {loading && <Spinner />}
+          {loading && orders.length === 0 && <Spinner />}
           {!loading && orders.length === 0 && (
             <div className="text-center py-8 text-slate-400">
               <div className="text-4xl mb-2">📋</div>
@@ -211,10 +212,14 @@ export default function OrdersPage() {
               </div>
             </div>
           ))}
-          {hasMore && orders.length > 0 && (
-            <button onClick={loadMore} className="w-full py-3 text-sm text-[#004EAB] font-medium">
-              Tải thêm
-            </button>
+
+          {/* Infinite scroll sentinel */}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {loading && orders.length > 0 && (
+                <Loader2 size={24} className="animate-spin text-slate-400" />
+              )}
+            </div>
           )}
         </div>
       </div>

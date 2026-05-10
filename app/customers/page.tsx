@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface ApiResponse { success: boolean; data: Customer[] }
@@ -18,28 +19,39 @@ const TYPE_FILTERS = [
   { value: 'PARTNER', label: 'Đối tác' },
 ];
 
+const LIMIT = 20;
+
 export default function CustomersPage() {
   const router = useRouter();
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [type, setType] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ phone: '', name: '', address: '', type: 'RETAIL', notes: '' });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ limit: '50' });
-    if (search) params.set('search', search);
-    if (type) params.set('type', type);
-    api.get<ApiResponse>(`/customers?${params}`)
-      .then((r) => setCustomers(r.data))
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, [search, type]);
+  // Debounced values used as fetch deps
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedType, setDebouncedType] = useState('');
 
-  useEffect(() => { const t = setTimeout(load, 350); return () => clearTimeout(t); }, [load]);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setDebouncedType(type); }, [type]);
+
+  const fetchPage = useCallback(async (page: number): Promise<Customer[]> => {
+    const params = new URLSearchParams({ limit: String(LIMIT), offset: String(page * LIMIT) });
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (debouncedType) params.set('type', debouncedType);
+    const r = await api.get<ApiResponse>(`/customers?${params}`).catch(() => null);
+    return r?.data ?? [];
+  }, [debouncedSearch, debouncedType]);
+
+  const { items: customers, loading, hasMore, sentinelRef, reset } = useInfiniteScroll<Customer>({
+    fetchPage,
+    pageSize: LIMIT,
+  });
 
   async function createCustomer() {
     setError('');
@@ -48,7 +60,7 @@ export default function CustomersPage() {
       await api.post('/customers', form);
       setForm({ phone: '', name: '', address: '', type: 'RETAIL', notes: '' });
       setShowForm(false);
-      load();
+      reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     }
@@ -122,7 +134,7 @@ export default function CustomersPage() {
             </div>
           )}
 
-          {loading && <Spinner />}
+          {loading && customers.length === 0 && <Spinner />}
 
           {!loading && customers.length === 0 && !showForm && (
             <div className="text-center py-12 text-slate-400">
@@ -145,6 +157,15 @@ export default function CustomersPage() {
               </div>
             </Card>
           ))}
+
+          {/* Infinite scroll sentinel */}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              {loading && customers.length > 0 && (
+                <Loader2 size={24} className="animate-spin text-slate-400" />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </AuthGuard>
