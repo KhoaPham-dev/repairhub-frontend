@@ -1,4 +1,4 @@
-import { getToken, getUser, setAuth, clearAuth, isAdmin, User } from '@/lib/auth';
+import { getToken, getUser, setAuth, clearAuth, isAdmin, getRoleFromToken, User } from '@/lib/auth';
 
 const mockUser: User = {
   id: 'u1',
@@ -15,6 +15,21 @@ const techUser: User = {
   role: 'TECHNICIAN',
   branch_id: 'branch-1',
 };
+
+/**
+ * Build a minimal fake JWT with the given payload. The signature segment is not
+ * verified on the client — we only need a structurally valid three-part token.
+ */
+function makeJwt(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const body = btoa(JSON.stringify(payload))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${header}.${body}.fakesig`;
+}
+
+const adminJwt = makeJwt({ sub: 'u1', role: 'ADMIN' });
+const techJwt  = makeJwt({ sub: 'u2', role: 'TECHNICIAN' });
 
 describe('lib/auth', () => {
   beforeEach(() => {
@@ -77,18 +92,55 @@ describe('lib/auth', () => {
     });
   });
 
+  describe('getRoleFromToken', () => {
+    it('returns null when no token is stored', () => {
+      expect(getRoleFromToken()).toBeNull();
+    });
+
+    it('extracts ADMIN role from a valid JWT payload', () => {
+      localStorage.setItem('token', adminJwt);
+      expect(getRoleFromToken()).toBe('ADMIN');
+    });
+
+    it('extracts TECHNICIAN role from a valid JWT payload', () => {
+      localStorage.setItem('token', techJwt);
+      expect(getRoleFromToken()).toBe('TECHNICIAN');
+    });
+
+    it('returns null for a malformed token (not three parts)', () => {
+      localStorage.setItem('token', 'notavalidjwt');
+      expect(getRoleFromToken()).toBeNull();
+    });
+
+    it('returns null when payload has no role field', () => {
+      const noRoleJwt = makeJwt({ sub: 'u3' });
+      localStorage.setItem('token', noRoleJwt);
+      expect(getRoleFromToken()).toBeNull();
+    });
+  });
+
   describe('isAdmin', () => {
-    it('returns true when logged in user is ADMIN', () => {
-      setAuth('token', mockUser);
+    it('returns true when the JWT payload contains role=ADMIN', () => {
+      // isAdmin() reads from the JWT, not from localStorage.user, so tampering
+      // with localStorage.user cannot elevate privileges.
+      localStorage.setItem('token', adminJwt);
       expect(isAdmin()).toBe(true);
     });
 
-    it('returns false when logged in user is TECHNICIAN', () => {
-      setAuth('token', techUser);
+    it('returns false when the JWT payload contains role=TECHNICIAN', () => {
+      localStorage.setItem('token', techJwt);
       expect(isAdmin()).toBe(false);
     });
 
-    it('returns false when no user is logged in', () => {
+    it('returns false when no token is stored', () => {
+      expect(isAdmin()).toBe(false);
+    });
+
+    it('returns false even if localStorage.user claims ADMIN but token says TECHNICIAN', () => {
+      // This is the key security property: a tampered plain-JSON user object
+      // cannot bypass the JWT-based role check.
+      localStorage.setItem('token', techJwt);
+      localStorage.setItem('user', JSON.stringify(mockUser)); // tampered: claims ADMIN
       expect(isAdmin()).toBe(false);
     });
   });

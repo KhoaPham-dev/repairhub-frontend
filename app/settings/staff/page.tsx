@@ -23,14 +23,22 @@ export default function StaffSettingsPage() {
   const currentUser = getUser();
 
   function loadUsers() {
-    if (!isAdmin()) return;
     api.get<ApiResponse<User[]>>('/users')
       .then((r) => setUsers(r.data))
       .catch(() => null)
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    // Redirect non-admins immediately rather than rendering a locked UI.
+    // isAdmin() derives the role from the JWT payload, so localStorage.user
+    // tampering cannot bypass this check.
+    if (!isAdmin()) {
+      router.replace('/settings');
+      return;
+    }
+    loadUsers();
+  }, []);
 
   async function createUser() {
     setError('');
@@ -47,22 +55,6 @@ export default function StaffSettingsPage() {
   async function toggleUser(u: User) {
     await api.put(`/users/${u.id}`, { is_active: !u.is_active });
     loadUsers();
-  }
-
-  if (!isAdmin()) {
-    return (
-      <AuthGuard>
-        <div className="min-h-screen bg-[#F8F9FB] pb-24">
-          <PageHeader title="Nhân viên" showBack backHref="/settings" />
-          <div className="p-4">
-            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-slate-100">
-              <div className="text-4xl mb-2">🔒</div>
-              <div className="text-slate-600 text-sm">Chỉ quản trị viên mới có thể truy cập trang này</div>
-            </div>
-          </div>
-        </div>
-      </AuthGuard>
-    );
   }
 
   return (
