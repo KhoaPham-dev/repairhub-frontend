@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ClipboardList, Users, User, Plus } from 'lucide-react';
+import { Home, ClipboardList, Users, Settings, Plus } from 'lucide-react';
 
 const LEFT_TABS = [
   { href: '/', label: 'Tổng quan', icon: Home },
@@ -11,7 +11,7 @@ const LEFT_TABS = [
 
 const RIGHT_TABS = [
   { href: '/customers', label: 'Khách hàng', icon: Users },
-  { href: '/staff', label: 'Nhân viên', icon: User },
+  { href: '/settings', label: 'Cài đặt', icon: Settings },
 ] as const;
 
 const HIDE_ON = ['/login', '/orders/new'];
@@ -39,7 +39,10 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="shrink-0 bg-white border-t border-slate-100 pb-safe rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+    <nav
+      className="shrink-0 bg-white border-t border-slate-100 rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="flex items-center justify-between px-4 py-2 relative">
         <div className="flex w-[40%] justify-between pr-2">
           {LEFT_TABS.map((t) => <NavItem key={t.href} {...t} />)}
