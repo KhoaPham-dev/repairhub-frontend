@@ -79,7 +79,7 @@ export default function OrderDetailPage() {
   const load = useCallback(() => {
     api.get<ApiResponse<OrderDetail>>(`/orders/${id}`).then((r) => {
       setOrder(r.data);
-      setQuotation(r.data.quotation > 0 ? formatMoney(Math.round(Number(r.data.quotation))) : '');
+      setQuotation(r.data.quotation > 0 ? String(Math.round(Number(r.data.quotation) / 1000)) : '');
       const months = r.data.warranty_period_months;
       if ([3, 6, 12].includes(months)) {
         setWarrantyOption(String(months));
@@ -105,7 +105,7 @@ export default function OrderDetailPage() {
     try {
       // Update quotation & warranty if changed
       const patchData: Record<string, unknown> = {};
-      const newQuotation = parseMoney(quotation);
+      const newQuotation = parseMoney(quotation) * 1000;
       if (order && newQuotation !== Math.round(Number(order.quotation))) patchData.quotation = newQuotation;
 
       const selectedMonths = warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0;
@@ -157,7 +157,7 @@ export default function OrderDetailPage() {
   const isTerminal = TERMINAL.includes(order.status);
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const hasChanges = !!(newStatus || notes.trim() || newImages.length > 0 ||
-    parseMoney(quotation) !== Math.round(Number(order.quotation)) ||
+    parseMoney(quotation) * 1000 !== Math.round(Number(order.quotation)) ||
     (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
 
   return (
@@ -234,14 +234,14 @@ export default function OrderDetailPage() {
               <Card>
                 <h3 className="font-semibold text-gray-800 mb-3 text-sm">Báo giá</h3>
                 <div className="relative">
-                  <input type="text" inputMode="numeric" value={quotation}
+                  <input type="text" inputMode="numeric" value={quotation ? formatMoney(Number(quotation)) : ''}
                     onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, '');
-                      setQuotation(digits ? formatMoney(Number(digits)) : '');
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+                      setQuotation(digits);
                     }}
                     placeholder="Nhập báo giá (VNĐ)"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-12" />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">đ</span>
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-20" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">.000 đ</span>
                 </div>
               </Card>
 
