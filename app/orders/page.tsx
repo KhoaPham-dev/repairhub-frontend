@@ -60,7 +60,8 @@ function OrdersPageInner() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [status, setStatus] = useState(searchParams.get('status') ?? '');
-  const [sortDir, setSortDir] = useState<'desc' | 'asc'>((searchParams.get('sort') as 'asc' | 'desc') ?? 'desc');
+  const rawSort = searchParams.get('sort');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>(rawSort === 'asc' ? 'asc' : 'desc');
 
   // Debounced values used as fetch deps
   const [debouncedSearch, setDebouncedSearch] = useState(search);
