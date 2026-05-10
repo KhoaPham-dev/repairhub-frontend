@@ -35,7 +35,7 @@ function formatDate(iso: string): string {
 }
 
 /** Relative time in Vietnamese: "Vừa xong" < 60s; "X giờ trước" < 24h; "X ngày trước" otherwise */
-export function relativeTime(iso: string): string {
+function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   if (diffMs < 60_000) return 'Vừa xong';
   const hours = Math.floor(diffMs / 3_600_000);
