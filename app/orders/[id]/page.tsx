@@ -236,7 +236,7 @@ export default function OrderDetailPage() {
                 <div className="relative">
                   <input type="text" inputMode="numeric" value={quotation ? formatMoney(Number(quotation)) : ''}
                     onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, '');
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
                       setQuotation(digits);
                     }}
                     placeholder="Nhập báo giá (VNĐ)"
