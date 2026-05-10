@@ -100,6 +100,25 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Báo cáo doanh thu')).toBeInTheDocument();
   });
 
+  it('does NOT render Báo cáo đối tác for non-admin', () => {
+    mockIsAdmin.mockReturnValue(false);
+    render(<SettingsPage />);
+    expect(screen.queryByText('Báo cáo đối tác')).toBeNull();
+  });
+
+  it('renders Báo cáo đối tác for admin', () => {
+    mockIsAdmin.mockReturnValue(true);
+    render(<SettingsPage />);
+    expect(screen.getByText('Báo cáo đối tác')).toBeInTheDocument();
+  });
+
+  it('navigates to /settings/reports/partner when Báo cáo đối tác is clicked (admin)', () => {
+    mockIsAdmin.mockReturnValue(true);
+    render(<SettingsPage />);
+    fireEvent.click(screen.getByText('Báo cáo đối tác'));
+    expect(mockPush).toHaveBeenCalledWith('/settings/reports/partner');
+  });
+
   it('navigates to /settings/change-password when Đổi mật khẩu is clicked', () => {
     mockIsAdmin.mockReturnValue(false);
     render(<SettingsPage />);
