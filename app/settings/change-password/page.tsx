@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
@@ -8,7 +8,7 @@ import AuthGuard from '@/components/AuthGuard';
 import { api } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 
-export default function ChangePasswordPage() {
+function ChangePasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetUserId = searchParams.get('userId');
@@ -103,5 +103,13 @@ export default function ChangePasswordPage() {
         </div>
       </div>
     </AuthGuard>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense>
+      <ChangePasswordForm />
+    </Suspense>
   );
 }
