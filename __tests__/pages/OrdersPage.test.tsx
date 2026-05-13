@@ -74,6 +74,17 @@ const MOCK_ORDERS = [
     created_at: '2024-01-02T00:00:00Z',
     branch_name: 'Chi nhánh 2',
   },
+  {
+    id: 'order-3',
+    order_code: 'RH-003',
+    customer_name: 'Lê Văn C',
+    customer_phone: '0923456789',
+    device_name: 'Tai nghe Bose',
+    status: 'DANG_SUA_CHUA',
+    priority: 'MEDIUM',
+    created_at: '2024-01-03T00:00:00Z',
+    branch_name: 'Chi nhánh 1',
+  },
 ];
 
 beforeEach(() => {
@@ -186,5 +197,31 @@ describe('OrdersPage', () => {
     render(<OrdersPage />);
     // Sort button aria-label reflects asc direction
     expect(screen.getByLabelText('Sắp xếp cũ nhất trước')).toBeInTheDocument();
+  });
+
+  it('default sort direction is asc when no sort param in URL', () => {
+    render(<OrdersPage />);
+    // With default asc, the toggle button label says "Sắp xếp cũ nhất trước"
+    expect(screen.getByLabelText('Sắp xếp cũ nhất trước')).toBeInTheDocument();
+  });
+
+  it('sort direction is desc when URL sort param is desc', () => {
+    mockSearchParams.set('sort', 'desc');
+    render(<OrdersPage />);
+    expect(screen.getByLabelText('Sắp xếp mới nhất trước')).toBeInTheDocument();
+  });
+
+  it('HIGH priority order has red border class', async () => {
+    render(<OrdersPage />);
+    await waitFor(() => screen.getByText('Trần Thị B · 0912345678'));
+    const highCard = screen.getByText('RH-002').closest('[class*="rounded-2xl"]');
+    expect(highCard).toHaveClass('border-red-500');
+  });
+
+  it('MEDIUM priority order has yellow border class', async () => {
+    render(<OrdersPage />);
+    await waitFor(() => screen.getByText('Lê Văn C · 0923456789'));
+    const mediumCard = screen.getByText('RH-003').closest('[class*="rounded-2xl"]');
+    expect(mediumCard).toHaveClass('border-yellow-400');
   });
 });
