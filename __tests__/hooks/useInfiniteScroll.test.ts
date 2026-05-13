@@ -126,6 +126,33 @@ describe('useInfiniteScroll', () => {
     expect(result.current.items).toEqual(items2);
   });
 
+  it('calls the new fetchPage (not stale) when fetchPage reference changes', async () => {
+    const fetchPage1 = jest.fn().mockResolvedValue([{ id: 1 }]);
+    const fetchPage2 = jest.fn().mockResolvedValue([{ id: 2 }]);
+
+    const { result, rerender } = renderHook(
+      ({ fn }: { fn: (page: number) => Promise<{ id: number }[]> }) =>
+        useInfiniteScroll({ fetchPage: fn, pageSize: 20 }),
+      { initialProps: { fn: fetchPage1 } },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(fetchPage1).toHaveBeenCalledWith(0);
+    expect(fetchPage2).not.toHaveBeenCalled();
+
+    // Swap to a new fetchPage reference (simulates debouncedSort changing)
+    rerender({ fn: fetchPage2 });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // The reset fetch must use fetchPage2, not the stale fetchPage1
+    expect(fetchPage2).toHaveBeenCalledWith(0);
+    expect(result.current.items).toEqual([{ id: 2 }]);
+
+    // fetchPage1 must not have been called again during the reset
+    expect(fetchPage1).toHaveBeenCalledTimes(1);
+  });
+
   it('does not double-fetch while already loading', async () => {
     let resolve: (v: { id: number }[]) => void;
     const deferred = new Promise<{ id: number }[]>((r) => { resolve = r; });
