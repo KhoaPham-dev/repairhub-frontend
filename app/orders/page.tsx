@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<string, string> = {
   DANG_BAO_HANH: 'Đang bảo hành',
 };
 
-const PRIORITY_LABELS: Record<string, string> = { LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' };
+const PRIORITY_LABELS: Record<string, string> = { MEDIUM: 'Trung bình', HIGH: 'Cao' };
 
 const FILTERS = [
   { key: '', label: 'Tất cả' },
@@ -61,7 +61,7 @@ function OrdersPageInner() {
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [status, setStatus] = useState(searchParams.get('status') ?? '');
   const rawSort = searchParams.get('sort');
-  const [sortDir, setSortDir] = useState<'desc' | 'asc'>(rawSort === 'asc' ? 'asc' : 'desc');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>(rawSort === 'desc' ? 'desc' : 'asc');
 
   // Debounced values used as fetch deps
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -81,7 +81,7 @@ function OrdersPageInner() {
     const params = new URLSearchParams();
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (debouncedStatus) params.set('status', debouncedStatus);
-    if (debouncedSort !== 'desc') params.set('sort', debouncedSort);
+    if (debouncedSort !== 'asc') params.set('sort', debouncedSort);
     const qs = params.toString();
     router.replace('/orders' + (qs ? '?' + qs : ''));
   }, [debouncedSearch, debouncedStatus, debouncedSort, router]);
@@ -190,7 +190,9 @@ function OrdersPageInner() {
               className={`bg-white rounded-2xl p-4 shadow-sm active:bg-slate-50 cursor-pointer transition-colors ${
                 order.priority === 'HIGH'
                   ? 'border-2 border-red-500'
-                  : 'border border-slate-100'
+                  : order.priority === 'MEDIUM'
+                    ? 'border-2 border-yellow-400'
+                    : 'border border-slate-100'
               }`}
             >
               <div className="flex justify-between items-start mb-2">
@@ -214,7 +216,11 @@ function OrdersPageInner() {
                 </span>
                 {order.priority && (
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                    order.priority === 'HIGH' ? 'bg-orange-50 text-orange-600' : 'bg-slate-100 text-slate-600'
+                    order.priority === 'HIGH'
+                      ? 'bg-red-50 text-red-600'
+                      : order.priority === 'MEDIUM'
+                        ? 'bg-yellow-50 text-yellow-600'
+                        : 'bg-slate-100 text-slate-600'
                   }`}>
                     Ưu tiên {PRIORITY_LABELS[order.priority]}
                   </span>
