@@ -57,8 +57,7 @@ export function useInfiniteScroll<T>({ fetchPage, pageSize }: UseInfiniteScrollO
     hasMoreRef.current = true;
     setHasMore(true);
     load(0, false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchPage]);
+  }, [fetchPage, load]);
 
   // IntersectionObserver wired to the sentinel element.
   const observerRef = useRef<IntersectionObserver | null>(null);
