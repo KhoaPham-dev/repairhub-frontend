@@ -61,7 +61,7 @@ export default function CustomerDetailPage() {
       setEditing(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('409') || msg.toLowerCase().includes('phone') || msg.toLowerCase().includes('điện thoại')) {
+      if (msg === 'Số điện thoại đã tồn tại') {
         setPhoneError('Số điện thoại đã tồn tại');
       } else {
         setPhoneError(msg || 'Có lỗi xảy ra');
