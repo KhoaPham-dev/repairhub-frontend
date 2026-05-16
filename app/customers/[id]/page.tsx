@@ -57,7 +57,7 @@ export default function CustomerDetailPage() {
         address: form.address,
         notes: form.notes,
       });
-      setCustomer(res.data);
+      setCustomer((prev) => ({ ...res.data, orders: prev?.orders ?? [] }));
       setEditing(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
