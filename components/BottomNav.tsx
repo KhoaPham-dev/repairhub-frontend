@@ -41,7 +41,7 @@ export default function BottomNav() {
   return (
     <nav
       className="shrink-0 bg-white border-t border-slate-100 rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
     >
       <div className="flex items-center justify-between px-4 py-2 relative">
         <div className="flex w-[40%] justify-between pr-2">
