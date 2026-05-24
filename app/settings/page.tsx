@@ -24,46 +24,46 @@ export default function SettingsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader title="Cài đặt" />
 
         <div className="px-4 pt-2 space-y-5">
           {/* Admin-only section */}
           {admin && (
             <section>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Quản trị</p>
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-50">
+              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 px-1">Quản trị</p>
+              <div className="bg-surface rounded-2xl border border-border-subtle divide-y divide-border-subtle">
                 <button
                   onClick={() => router.push('/settings/staff')}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-surface-alt transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                    <Users size={16} className="text-purple-600" />
+                  <div className="w-8 h-8 rounded-xl bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                    <Users size={16} className="text-purple-400" />
                   </div>
-                  <span className="flex-1 text-left text-sm font-medium text-slate-900">Quản lý nhân viên</span>
-                  <ChevronRight size={16} className="text-slate-300" />
+                  <span className="flex-1 text-left text-sm font-medium text-text-base">Quản lý nhân viên</span>
+                  <ChevronRight size={16} className="text-text-muted" />
                 </button>
 
                 <button
                   onClick={() => router.push('/settings/reports')}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-surface-alt transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-                    <BarChart2 size={16} className="text-green-600" />
+                  <div className="w-8 h-8 rounded-xl bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                    <BarChart2 size={16} className="text-green-400" />
                   </div>
-                  <span className="flex-1 text-left text-sm font-medium text-slate-900">Báo cáo doanh thu</span>
-                  <ChevronRight size={16} className="text-slate-300" />
+                  <span className="flex-1 text-left text-sm font-medium text-text-base">Báo cáo doanh thu</span>
+                  <ChevronRight size={16} className="text-text-muted" />
                 </button>
 
                 <button
                   onClick={() => router.push('/settings/reports/partner')}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-surface-alt transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                    <FileSpreadsheet size={16} className="text-orange-600" />
+                  <div className="w-8 h-8 rounded-xl bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                    <FileSpreadsheet size={16} className="text-orange-400" />
                   </div>
-                  <span className="flex-1 text-left text-sm font-medium text-slate-900">Báo cáo đối tác</span>
-                  <ChevronRight size={16} className="text-slate-300" />
+                  <span className="flex-1 text-left text-sm font-medium text-text-base">Báo cáo đối tác</span>
+                  <ChevronRight size={16} className="text-text-muted" />
                 </button>
               </div>
             </section>
@@ -71,27 +71,27 @@ export default function SettingsPage() {
 
           {/* Account section */}
           <section>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">Tài khoản</p>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-50">
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 px-1">Tài khoản</p>
+            <div className="bg-surface rounded-2xl border border-border-subtle divide-y divide-border-subtle">
               <button
                 onClick={() => router.push('/settings/change-password')}
-                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-50 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-surface-alt transition-colors"
               >
-                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <KeyRound size={16} className="text-blue-600" />
+                <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                  <KeyRound size={16} className="text-accent" />
                 </div>
-                <span className="flex-1 text-left text-sm font-medium text-slate-900">Đổi mật khẩu</span>
-                <ChevronRight size={16} className="text-slate-300" />
+                <span className="flex-1 text-left text-sm font-medium text-text-base">Đổi mật khẩu</span>
+                <ChevronRight size={16} className="text-text-muted" />
               </button>
 
               <button
                 onClick={() => setLogoutOpen(true)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-red-50 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-red-900/20 transition-colors"
               >
-                <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <LogOut size={16} className="text-red-500" />
+                <div className="w-8 h-8 rounded-xl bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                  <LogOut size={16} className="text-red-400" />
                 </div>
-                <span className="flex-1 text-left text-sm font-medium text-red-500">Đăng xuất</span>
+                <span className="flex-1 text-left text-sm font-medium text-red-400">Đăng xuất</span>
               </button>
             </div>
           </section>

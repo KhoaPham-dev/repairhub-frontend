@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 // `*` transition rule and won't cause the route flicker fixed in RH-56.
 export default function Spinner({ label = 'Đang tải...' }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+    <div className="flex flex-col items-center justify-center py-12 text-text-muted">
       <Loader2 size={28} className="animate-spin mb-2" />
       <span className="text-sm">{label}</span>
     </div>

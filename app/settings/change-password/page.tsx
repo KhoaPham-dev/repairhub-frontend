@@ -56,46 +56,46 @@ function ChangePasswordForm() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader title="Đổi mật khẩu" onBack={() => router.push(backPath)} />
 
         <div className="px-4 pt-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
-              <label className="block text-sm font-medium text-slate-700">Mật khẩu mới</label>
+            <div className="bg-surface rounded-2xl border border-border-subtle p-4 space-y-3">
+              <label className="block text-sm font-medium text-text-muted">Mật khẩu mới</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   placeholder="Nhập mật khẩu mới"
-                  className={`w-full px-4 py-3 rounded-xl border text-sm outline-none pr-12 transition-colors ${
+                  className={`w-full px-4 py-3 rounded-xl border text-sm outline-none pr-12 transition-colors text-text-base caret-accent placeholder:text-text-muted ${
                     error
-                      ? 'border-red-400 focus:border-red-500 bg-red-50'
-                      : 'border-slate-200 focus:border-[#715DF2] bg-[#f8fafc]'
+                      ? 'border-red-500 focus:border-red-500 bg-surface-alt'
+                      : 'border-border-subtle focus:border-accent bg-surface-alt'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 active:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted active:text-text-base"
                   aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {error && <p className="text-red-500 text-xs">{error}</p>}
-              <p className="text-xs text-slate-400">Tối thiểu 8 ký tự</p>
+              <p className="text-xs text-text-muted">Tối thiểu 8 ký tự</p>
             </div>
 
             {success && (
-              <p className="text-green-600 text-sm text-center font-medium">{success}</p>
+              <p className="text-green-400 text-sm text-center font-medium">{success}</p>
             )}
 
             <button
               type="submit"
               disabled={saving || !password}
-              className="w-full bg-[#715DF2] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm"
+              className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted"
             >
               {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>

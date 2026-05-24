@@ -15,7 +15,7 @@ export default function ImageThumb({ file, onRemove }: { file: File; onRemove: (
   }, [file]);
 
   return (
-    <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
+    <div className="relative aspect-square rounded-xl overflow-hidden bg-surface">
       {url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={file.name} className="w-full h-full object-cover" />
@@ -24,7 +24,7 @@ export default function ImageThumb({ file, onRemove }: { file: File; onRemove: (
         type="button"
         onClick={onRemove}
         aria-label="Xoá ảnh"
-        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center active:bg-black/80"
+        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-overlay text-text-base flex items-center justify-center active:bg-black/80"
       >
         <X size={14} />
       </button>

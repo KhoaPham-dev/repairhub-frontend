@@ -8,7 +8,7 @@ import AuthGuard from '@/components/AuthGuard';
 import { api } from '@/lib/api';
 import { isAdmin, getToken } from '@/lib/auth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
 
 interface Partner {
   id: string;
@@ -122,7 +122,7 @@ export default function PartnerReportPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader
           title="Báo cáo đối tác"
           onBack={() => router.push('/settings')}
@@ -130,15 +130,15 @@ export default function PartnerReportPage() {
 
         <div className="px-4 pt-4 space-y-5">
           {/* Partner section */}
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-4">
-            <label htmlFor="partner-select" className="block text-xs font-semibold text-slate-500 mb-2">
+          <section className="bg-surface rounded-2xl border border-border-subtle px-4 py-4">
+            <label htmlFor="partner-select" className="block text-xs font-semibold text-text-muted mb-2">
               Đối tác
             </label>
             <select
               id="partner-select"
               value={selectedPartnerId}
               onChange={(e) => setSelectedPartnerId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#715DF2]"
+              className="w-full rounded-xl border border-border-subtle bg-surface-alt px-3 py-2.5 text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">Chọn đối tác</option>
               {partners.map((p) => (
@@ -150,8 +150,8 @@ export default function PartnerReportPage() {
           </section>
 
           {/* Period section */}
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-4">
-            <p className="text-xs font-semibold text-slate-500 mb-3">Kỳ báo cáo</p>
+          <section className="bg-surface rounded-2xl border border-border-subtle px-4 py-4">
+            <p className="text-xs font-semibold text-text-muted mb-3">Kỳ báo cáo</p>
 
             <div className="flex gap-2 mb-4">
               {(
@@ -166,8 +166,8 @@ export default function PartnerReportPage() {
                   onClick={() => setDatePreset(value)}
                   className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
                     datePreset === value
-                      ? 'bg-[#715DF2] text-white border-[#715DF2]'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 active:bg-slate-100'
+                      ? 'bg-accent text-[#0B0B0B] border-accent'
+                      : 'bg-surface-alt text-text-muted border-border-subtle active:bg-surface'
                   }`}
                 >
                   {label}
@@ -178,7 +178,7 @@ export default function PartnerReportPage() {
             {datePreset === 'custom' && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="custom-start" className="block text-xs text-slate-500 mb-1">
+                  <label htmlFor="custom-start" className="block text-xs text-text-muted mb-1">
                     Từ ngày
                   </label>
                   <input
@@ -186,11 +186,11 @@ export default function PartnerReportPage() {
                     type="date"
                     value={customStart}
                     onChange={(e) => setCustomStart(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#715DF2]"
+                    className="w-full rounded-xl border border-border-subtle bg-surface-alt px-3 py-2 text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                 </div>
                 <div>
-                  <label htmlFor="custom-end" className="block text-xs text-slate-500 mb-1">
+                  <label htmlFor="custom-end" className="block text-xs text-text-muted mb-1">
                     Đến ngày
                   </label>
                   <input
@@ -198,7 +198,7 @@ export default function PartnerReportPage() {
                     type="date"
                     value={customEnd}
                     onChange={(e) => setCustomEnd(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#715DF2]"
+                    className="w-full rounded-xl border border-border-subtle bg-surface-alt px-3 py-2 text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function PartnerReportPage() {
           {errorMsg && (
             <div
               role="alert"
-              className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"
+              className="bg-red-900/30 border border-red-800 text-red-400 text-sm rounded-xl px-4 py-3"
             >
               {errorMsg}
             </div>
@@ -219,7 +219,7 @@ export default function PartnerReportPage() {
           <button
             onClick={handleDownload}
             disabled={isDownloadDisabled()}
-            className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#715DF2] text-white rounded-2xl text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-3.5 bg-accent text-[#0B0B0B] rounded-2xl text-sm font-semibold disabled:bg-surface disabled:text-text-muted disabled:cursor-not-allowed active:opacity-90 transition-opacity"
           >
             {loading ? (
               <>

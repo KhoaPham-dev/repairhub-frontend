@@ -66,39 +66,39 @@ describe('BottomNav', () => {
     expect(container.firstChild).not.toBeNull();
   });
 
-  it('applies active purple color to home tab on /', () => {
+  it('applies active accent color to home tab on /', () => {
     mockUsePathname.mockReturnValue('/');
     render(<BottomNav />);
     const span = screen.getByText('Tổng quan');
-    expect(span.className).toContain('text-[#715DF2]');
+    expect(span.className).toContain('text-accent');
   });
 
-  it('applies active purple color to orders tab on /orders', () => {
+  it('applies active accent color to orders tab on /orders', () => {
     mockUsePathname.mockReturnValue('/orders');
     render(<BottomNav />);
     const span = screen.getByText('Đơn hàng');
-    expect(span.className).toContain('text-[#715DF2]');
+    expect(span.className).toContain('text-accent');
   });
 
-  it('applies active purple color to settings tab on /settings', () => {
+  it('applies active accent color to settings tab on /settings', () => {
     mockUsePathname.mockReturnValue('/settings');
     render(<BottomNav />);
     const span = screen.getByText('Cài đặt');
-    expect(span.className).toContain('text-[#715DF2]');
+    expect(span.className).toContain('text-accent');
   });
 
-  it('applies active purple color to settings tab on /settings/staff (sub-route)', () => {
+  it('applies active accent color to settings tab on /settings/staff (sub-route)', () => {
     mockUsePathname.mockReturnValue('/settings/staff');
     render(<BottomNav />);
     const span = screen.getByText('Cài đặt');
-    expect(span.className).toContain('text-[#715DF2]');
+    expect(span.className).toContain('text-accent');
   });
 
-  it('applies inactive slate color to non-active tab', () => {
+  it('applies inactive muted color to non-active tab', () => {
     mockUsePathname.mockReturnValue('/orders');
     render(<BottomNav />);
     const span = screen.getByText('Tổng quan');
-    expect(span.className).toContain('text-slate-400');
+    expect(span.className).toContain('text-text-muted');
   });
 
   it('renders nav links with correct hrefs including /settings', () => {

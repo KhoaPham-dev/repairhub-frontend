@@ -71,20 +71,20 @@ export default function CustomerDetailPage() {
     }
   }
 
-  if (!customer) return <AuthGuard><div className="p-8 text-center text-gray-400">Đang tải...</div></AuthGuard>;
+  if (!customer) return <AuthGuard><div className="p-8 text-center text-text-muted">Đang tải...</div></AuthGuard>;
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader title={customer.name} subtitle="Khách hàng" onBack={() => router.back()} />
         <div className="p-4 space-y-4">
           <Card>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-gray-800 text-sm">Thông tin khách hàng</h3>
+              <h3 className="font-semibold text-text-base text-sm">Thông tin khách hàng</h3>
               {customer.type === 'PARTNER' && !editing && (
                 <button
                   onClick={startEditing}
-                  className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 text-[#004EAB] font-medium"
+                  className="text-xs px-3 py-1.5 rounded-xl border border-border-subtle text-accent font-medium"
                 >
                   Chỉnh sửa
                 </button>
@@ -94,57 +94,57 @@ export default function CustomerDetailPage() {
             {editing ? (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Tên khách hàng</label>
+                  <label className="text-xs text-text-muted mb-1 block">Tên khách hàng</label>
                   <input
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-[#004EAB]"
+                    className="border border-border-subtle rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-accent bg-surface-alt text-text-base caret-accent placeholder:text-text-muted"
                     placeholder="Tên khách hàng"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Số điện thoại</label>
+                  <label className="text-xs text-text-muted mb-1 block">Số điện thoại</label>
                   <input
                     value={form.phone}
                     onChange={(e) => { setForm((p) => ({ ...p, phone: e.target.value })); setPhoneError(''); }}
-                    className={`border rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-[#004EAB] ${phoneError ? 'border-red-400' : 'border-slate-200'}`}
+                    className={`border rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-accent bg-surface-alt text-text-base caret-accent placeholder:text-text-muted ${phoneError ? 'border-red-500' : 'border-border-subtle'}`}
                     placeholder="Số điện thoại"
                   />
                   {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Loại</label>
-                  <p className="text-sm text-gray-700">Đối tác</p>
+                  <label className="text-xs text-text-muted mb-1 block">Loại</label>
+                  <p className="text-sm text-text-base">Đối tác</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Địa chỉ</label>
+                  <label className="text-xs text-text-muted mb-1 block">Địa chỉ</label>
                   <input
                     value={form.address}
                     onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                    className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-[#004EAB]"
+                    className="border border-border-subtle rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-accent bg-surface-alt text-text-base caret-accent placeholder:text-text-muted"
                     placeholder="Địa chỉ"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Ghi chú</label>
+                  <label className="text-xs text-text-muted mb-1 block">Ghi chú</label>
                   <input
                     value={form.notes}
                     onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                    className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-[#004EAB]"
+                    className="border border-border-subtle rounded-lg px-3 py-2 text-sm w-full outline-none focus:border-accent bg-surface-alt text-text-base caret-accent placeholder:text-text-muted"
                     placeholder="Ghi chú"
                   />
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={cancelEditing}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium"
+                    className="flex-1 py-2.5 rounded-xl border border-border-subtle text-text-muted text-sm font-medium hover:text-text-base"
                   >
                     Huỷ
                   </button>
                   <button
                     onClick={saveEditing}
                     disabled={saving}
-                    className="flex-1 py-2.5 rounded-xl bg-[#004EAB] text-white text-sm font-semibold disabled:opacity-60"
+                    className="flex-1 py-2.5 rounded-xl bg-accent text-[#0B0B0B] text-sm font-semibold disabled:bg-surface disabled:text-text-muted"
                   >
                     {saving ? 'Đang lưu...' : 'Lưu'}
                   </button>
@@ -152,25 +152,25 @@ export default function CustomerDetailPage() {
               </div>
             ) : (
               <div className="space-y-1 text-sm">
-                <p><span className="text-gray-500">SĐT:</span> {customer.phone}</p>
-                <p><span className="text-gray-500">Loại:</span> {customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</p>
-                {customer.address && <p><span className="text-gray-500">Địa chỉ:</span> {customer.address}</p>}
-                {customer.notes && <p><span className="text-gray-500">Ghi chú:</span> {customer.notes}</p>}
+                <p><span className="text-text-muted">SĐT:</span> <span className="text-text-base">{customer.phone}</span></p>
+                <p><span className="text-text-muted">Loại:</span> <span className="text-text-base">{customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</span></p>
+                {customer.address && <p><span className="text-text-muted">Địa chỉ:</span> <span className="text-text-base">{customer.address}</span></p>}
+                {customer.notes && <p><span className="text-text-muted">Ghi chú:</span> <span className="text-text-base">{customer.notes}</span></p>}
               </div>
             )}
           </Card>
           <Card>
-            <h3 className="font-semibold text-gray-800 mb-3 text-sm">Lịch sử đơn hàng ({customer.orders.length})</h3>
+            <h3 className="font-semibold text-text-base mb-3 text-sm">Lịch sử đơn hàng ({customer.orders.length})</h3>
             <div className="space-y-2">
-              {customer.orders.length === 0 && <p className="text-gray-400 text-sm text-center py-4">Chưa có đơn hàng</p>}
+              {customer.orders.length === 0 && <p className="text-text-muted text-sm text-center py-4">Chưa có đơn hàng</p>}
               {customer.orders.map((o) => (
                 <div key={o.id} onClick={() => router.push(`/orders/${o.id}`)}
-                  className="flex justify-between items-center py-2 border-b border-gray-50 cursor-pointer last:border-0">
+                  className="flex justify-between items-center py-2 border-b border-border-subtle cursor-pointer last:border-0">
                   <div>
-                    <p className="text-sm font-medium">{o.order_code}</p>
-                    <p className="text-xs text-gray-400">{o.device_name}</p>
+                    <p className="text-sm font-medium text-text-base">{o.order_code}</p>
+                    <p className="text-xs text-text-muted">{o.device_name}</p>
                   </div>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                  <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
                     {STATUS_LABELS[o.status] ?? o.status}
                   </span>
                 </div>

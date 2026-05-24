@@ -2,7 +2,7 @@ import { getToken } from './auth';
 
 // NEXT_PUBLIC_API_URL is the bare API host (e.g. https://api.example.com).
 // /api is appended here, not in the env var.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();

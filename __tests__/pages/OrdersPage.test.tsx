@@ -115,7 +115,7 @@ describe('OrdersPage', () => {
     const { container } = render(<OrdersPage />);
     const stickyDiv = container.querySelector('.sticky.top-0.z-10');
     expect(stickyDiv).toBeInTheDocument();
-    expect(stickyDiv).toHaveClass('bg-[#F8F9FB]');
+    expect(stickyDiv).toHaveClass('bg-bg');
   });
 
   it('renders search input inside sticky header', () => {
@@ -166,7 +166,7 @@ describe('OrdersPage', () => {
     expect(stickyDiv).not.toBeNull();
     const input = stickyDiv!.querySelector('input[type="text"]');
     expect(input).toBeInTheDocument();
-    const statusLabel = stickyDiv!.querySelector('span.text-slate-400');
+    const statusLabel = stickyDiv!.querySelector('span.text-text-muted');
     expect(statusLabel).toBeInTheDocument();
   });
 
@@ -189,7 +189,7 @@ describe('OrdersPage', () => {
     render(<OrdersPage />);
     // The "Đã giao" filter button should appear active (selected)
     const daGiaoBtn = screen.getByRole('button', { name: 'Đã giao' });
-    expect(daGiaoBtn).toHaveClass('bg-white');
+    expect(daGiaoBtn).toHaveClass('bg-accent');
   });
 
   it('initializes sort direction from URL sort param', async () => {

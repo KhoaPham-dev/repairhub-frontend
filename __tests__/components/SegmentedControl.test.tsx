@@ -19,15 +19,15 @@ describe('SegmentedControl', () => {
   it('applies active styles to the active tab', () => {
     render(<SegmentedControl tabs={TABS} active="week" onChange={() => {}} />);
     const weekBtn = screen.getByText('Tuần này');
-    expect(weekBtn.className).toContain('bg-[#004EAB]');
-    expect(weekBtn.className).toContain('text-white');
+    expect(weekBtn.className).toContain('bg-accent');
+    expect(weekBtn.className).toContain('text-[#0B0B0B]');
   });
 
   it('applies inactive styles to non-active tabs', () => {
     render(<SegmentedControl tabs={TABS} active="today" onChange={() => {}} />);
     const weekBtn = screen.getByText('Tuần này');
-    expect(weekBtn.className).toContain('text-slate-600');
-    expect(weekBtn.className).not.toContain('bg-[#004EAB]');
+    expect(weekBtn.className).toContain('text-text-muted');
+    expect(weekBtn.className).not.toContain('bg-accent');
   });
 
   it('calls onChange with the correct value when a tab is clicked', () => {

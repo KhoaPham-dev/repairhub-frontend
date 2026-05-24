@@ -30,17 +30,17 @@ export default function BottomNav() {
     const active = isActive(href);
     return (
       <Link href={href} className="flex flex-col items-center justify-center w-16 space-y-1">
-        <div className={`flex items-center justify-center w-12 h-8 rounded-full transition-colors ${active ? 'bg-[#715DF2]/10 text-[#715DF2]' : 'text-slate-400'}`}>
+        <div className={`flex items-center justify-center w-12 h-8 rounded-full transition-colors ${active ? 'bg-accent/10 text-accent' : 'text-text-muted'}`}>
           <Icon size={22} strokeWidth={active ? 2.5 : 2} />
         </div>
-        <span className={`text-[10px] font-semibold ${active ? 'text-[#715DF2]' : 'text-slate-400'}`}>{label}</span>
+        <span className={`text-[10px] font-semibold ${active ? 'text-accent' : 'text-text-muted'}`}>{label}</span>
       </Link>
     );
   };
 
   return (
     <nav
-      className="shrink-0 bg-white border-t border-slate-100 rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
+      className="shrink-0 bg-surface-alt border-t border-border-subtle rounded-t-2xl"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
     >
       <div className="flex items-center justify-between px-4 py-2 relative">
@@ -52,7 +52,7 @@ export default function BottomNav() {
         <div className="absolute left-1/2 -translate-x-1/2 -top-6">
           <Link
             href="/orders/new"
-            className="w-14 h-14 bg-[#715DF2] text-white rounded-[1.25rem] flex items-center justify-center shadow-[0_8px_20px_rgba(113,93,242,0.4)] border-4 border-white active:scale-95 transition-transform"
+            className="w-14 h-14 bg-accent text-[#0B0B0B] rounded-[1.25rem] flex items-center justify-center shadow-[0_8px_20px_rgba(201,169,110,0.35)] border-4 border-surface-alt active:scale-95 transition-transform"
           >
             <Plus size={28} strokeWidth={2.5} />
           </Link>

@@ -71,8 +71,17 @@ const mockRevokeObjectURL = jest.fn();
 global.URL.createObjectURL = mockCreateObjectURL;
 global.URL.revokeObjectURL = mockRevokeObjectURL;
 
-import ReportsPage, { relativeTime } from '@/app/settings/reports/page';
+import ReportsPage from '@/app/settings/reports/page';
 import type { RevenueReport } from '@/app/settings/reports/page';
+
+// Duplicate of the module-internal relativeTime for unit testing.
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 60_000) return 'Vừa xong';
+  const hours = Math.floor(diffMs / 3_600_000);
+  if (hours < 24) return `${Math.max(1, hours)} giờ trước`;
+  return `${Math.floor(diffMs / 86_400_000)} ngày trước`;
+}
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

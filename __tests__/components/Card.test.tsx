@@ -11,9 +11,9 @@ describe('Card', () => {
   it('applies default base classes', () => {
     const { container } = render(<Card>content</Card>);
     const div = container.firstChild as HTMLElement;
-    expect(div.className).toContain('bg-white');
+    expect(div.className).toContain('bg-surface');
     expect(div.className).toContain('rounded-xl');
-    expect(div.className).toContain('shadow-sm');
+    expect(div.className).toContain('border-border-subtle');
     expect(div.className).toContain('p-4');
   });
 

@@ -91,12 +91,12 @@ describe('CustomerDetailPage', () => {
     });
   });
 
-  it('renders outer wrapper with bg-[#F8F9FB] and pb-24 classes', async () => {
+  it('renders outer wrapper with bg-bg and pb-24 classes', async () => {
     const { container } = render(<CustomerDetailPage />);
     await waitFor(() => {
       screen.getByRole('heading', { name: 'Nguyễn Thị B' });
     });
-    const outerDiv = container.querySelector('.min-h-screen.bg-\\[\\#F8F9FB\\].pb-24');
+    const outerDiv = container.querySelector('.min-h-screen.bg-bg.pb-24');
     expect(outerDiv).toBeInTheDocument();
   });
 

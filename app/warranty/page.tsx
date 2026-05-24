@@ -20,7 +20,7 @@ interface WarrantyResult {
 
 interface ApiResponse { success: boolean; data: WarrantyResult[] }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
 
 export default function WarrantyPage() {
   const router = useRouter();
@@ -50,9 +50,9 @@ export default function WarrantyPage() {
             <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && search()}
               placeholder="Tìm theo SĐT, serial, tên thiết bị..."
-              className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1565C0]" />
+              className="flex-1 px-4 py-3 rounded-xl border border-border-subtle bg-surface text-text-base text-sm outline-none focus:border-accent caret-accent placeholder:text-text-muted" />
             <button onClick={search} disabled={loading}
-              className="bg-[#1565C0] text-white px-5 py-3 rounded-xl text-sm font-medium disabled:opacity-60">
+              className="bg-accent text-[#0B0B0B] px-5 py-3 rounded-xl text-sm font-medium disabled:bg-surface disabled:text-text-muted">
               Tìm
             </button>
           </div>
@@ -60,7 +60,7 @@ export default function WarrantyPage() {
           {loading && <Spinner />}
 
           {!loading && searched && results.length === 0 && (
-            <Card className="text-center py-8 text-gray-400">
+            <Card className="text-center py-8 text-text-muted">
               <div className="text-4xl mb-2">🔍</div>
               <div>Không tìm thấy kết quả</div>
             </Card>
@@ -74,40 +74,40 @@ export default function WarrantyPage() {
                 <Card key={r.id}>
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="font-semibold text-gray-900 text-sm">{r.order_code}</p>
-                      <p className="text-xs text-gray-500">{r.customer_name} · {r.customer_phone}</p>
+                      <p className="font-semibold text-text-base text-sm">{r.order_code}</p>
+                      <p className="text-xs text-text-muted">{r.customer_name} · {r.customer_phone}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        r.warranty_status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                        r.warranty_status === 'EXPIRED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                        r.warranty_status === 'ACTIVE' ? 'bg-green-900/40 text-green-400' :
+                        r.warranty_status === 'EXPIRED' ? 'bg-red-900/40 text-red-400' : 'bg-surface-alt text-text-muted'}`}>
                         {r.warranty_status === 'ACTIVE' ? 'Còn bảo hành' : r.warranty_status === 'EXPIRED' ? 'Hết bảo hành' : 'Chưa xác định'}
                       </span>
                       {r.expiring_soon && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Sắp hết hạn BH</span>
+                        <span className="text-xs bg-orange-900/40 text-orange-400 px-2 py-0.5 rounded-full">Sắp hết hạn BH</span>
                       )}
                     </div>
                   </div>
                   <div className="text-sm space-y-1 mb-3">
-                    <p><span className="text-gray-500">Thiết bị:</span> {r.device_name}</p>
-                    <p><span className="text-gray-500">Lỗi sửa:</span> {r.fault_description}</p>
-                    <p><span className="text-gray-500">Giao ngày:</span> {new Date(r.updated_at).toLocaleDateString('vi-VN')}</p>
+                    <p><span className="text-text-muted">Thiết bị:</span> <span className="text-text-base">{r.device_name}</span></p>
+                    <p><span className="text-text-muted">Lỗi sửa:</span> <span className="text-text-base">{r.fault_description}</span></p>
+                    <p><span className="text-text-muted">Giao ngày:</span> <span className="text-text-base">{new Date(r.updated_at).toLocaleDateString('vi-VN')}</span></p>
                     {r.warranty_end_date && (
-                      <p><span className="text-gray-500">Hết bảo hành:</span> {new Date(r.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                      <p><span className="text-text-muted">Hết bảo hành:</span> <span className="text-text-base">{new Date(r.warranty_end_date).toLocaleDateString('vi-VN')}</span></p>
                     )}
                   </div>
                   {(intakeImgs.length > 0 || completionImgs.length > 0) && (
                     <div className="grid grid-cols-2 gap-2">
                       {intakeImgs[0] && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-1">Trước sửa</p>
+                          <p className="text-xs text-text-muted mb-1">Trước sửa</p>
                           <img src={`${API_BASE}/uploads/${intakeImgs[0].image_path}`} alt="before"
                             className="w-full h-28 object-cover rounded-lg" />
                         </div>
                       )}
                       {completionImgs[0] && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-1">Sau sửa</p>
+                          <p className="text-xs text-text-muted mb-1">Sau sửa</p>
                           <img src={`${API_BASE}/uploads/${completionImgs[0].image_path}`} alt="after"
                             className="w-full h-28 object-cover rounded-lg" />
                         </div>
@@ -115,7 +115,7 @@ export default function WarrantyPage() {
                     </div>
                   )}
                   <button onClick={() => router.push(`/orders/${r.id}`)}
-                    className="mt-3 w-full text-center text-xs text-[#1565C0] font-medium">
+                    className="mt-3 w-full text-center text-xs text-accent font-medium">
                     Xem đơn hàng →
                   </button>
                 </Card>

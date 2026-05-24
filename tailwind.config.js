@@ -8,7 +8,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#1565C0',
+        bg:              'var(--bg)',
+        surface:         'var(--surface)',
+        'surface-alt':   'var(--surface-alt)',
+        'border-subtle': 'var(--border)',
+        'text-base':     'var(--text)',
+        'text-muted':    'var(--text-muted)',
+        accent:          'var(--accent)',
+        'accent-hover':  'var(--accent-hover)',
+        overlay:         'var(--overlay)',
       },
     },
   },

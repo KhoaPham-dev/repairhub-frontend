@@ -55,8 +55,8 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
-        <div className="sticky top-0 z-10 bg-[#F8F9FB]">
+      <div className="min-h-screen bg-bg pb-24">
+        <div className="sticky top-0 z-10 bg-bg">
           <PageHeader title="Tổng quan" subtitle={`Xin chào, ${user?.full_name ?? ''}`} />
           <div className="px-4 pb-3">
             <SegmentedControl tabs={PERIOD_TABS} active={period} onChange={setPeriod} />
@@ -67,35 +67,35 @@ export default function DashboardPage() {
           {loading && <Spinner />}
           {!loading && (<>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
-              <p className="text-sm text-slate-500 mb-2 font-medium">Đang xử lý</p>
-              <p className="text-2xl font-bold text-[#004EAB]">{activeTotal}</p>
+            <div className="bg-surface p-4 rounded-2xl border border-border-subtle flex flex-col justify-between">
+              <p className="text-sm text-text-muted mb-2 font-medium">Đang xử lý</p>
+              <p className="text-2xl font-bold text-accent">{activeTotal}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500 mb-2 font-medium">Đơn hoàn tất</p>
-              <p className="text-2xl font-bold text-[#1D7F54]">{delivered}</p>
+            <div className="bg-surface p-4 rounded-2xl border border-border-subtle">
+              <p className="text-sm text-text-muted mb-2 font-medium">Đơn hoàn tất</p>
+              <p className="text-2xl font-bold text-green-400">{delivered}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500 mb-2 font-medium">Tiếp nhận</p>
-              <p className="text-2xl font-bold text-slate-900">{newToday}</p>
+            <div className="bg-surface p-4 rounded-2xl border border-border-subtle">
+              <p className="text-sm text-text-muted mb-2 font-medium">Tiếp nhận</p>
+              <p className="text-2xl font-bold text-text-base">{newToday}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-              <p className="text-sm text-slate-500 mb-2 font-medium">Đơn huỷ</p>
+            <div className="bg-surface p-4 rounded-2xl border border-border-subtle">
+              <p className="text-sm text-text-muted mb-2 font-medium">Đơn huỷ</p>
               <p className="text-2xl font-bold text-red-500">{cancelled}</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+          <div className="bg-surface p-5 rounded-2xl border border-border-subtle">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-[15px] font-bold text-slate-900">Biểu đồ doanh thu</h2>
-              <div className="flex items-center text-xs text-[#1D7F54] font-medium gap-1">
+              <h2 className="text-[15px] font-bold text-text-base">Biểu đồ doanh thu</h2>
+              <div className="flex items-center text-xs text-green-400 font-medium gap-1">
                 <TrendingUp size={12} /> +12%
               </div>
             </div>
             {/* Label row */}
             <div className="flex justify-between gap-2 mb-1">
               {revenueData.map((bar, i) => (
-                <span key={i} className="flex-1 text-[9px] text-slate-500 text-center truncate">{formatMoney(bar.revenue)}</span>
+                <span key={i} className="flex-1 text-[9px] text-text-muted text-center truncate">{formatMoney(bar.revenue)}</span>
               ))}
             </div>
             {/* Bar row — h-32 gives bars a definite parent height so % resolves correctly */}
@@ -103,14 +103,14 @@ export default function DashboardPage() {
               {revenueData.map((bar, i) => {
                 const barHeightPercent = maxRevenue > 0 ? Math.round((bar.revenue / maxRevenue) * 100) : 0;
                 return (
-                  <div key={i} className="flex-1 bg-[#e6f0fa] hover:bg-[#004EAB] rounded-t-md transition-colors"
+                  <div key={i} className="flex-1 bg-accent hover:bg-accent-hover rounded-t-md transition-colors"
                     style={{ height: barHeightPercent > 0 ? `${barHeightPercent}%` : '4px' }}
                   />
                 );
               })}
             </div>
             {/* Day label row */}
-            <div className="flex gap-2 mt-2 text-xs text-slate-400">
+            <div className="flex gap-2 mt-2 text-xs text-text-muted">
               {revenueData.map((bar) => (
                 <span key={bar.day} className="flex-1 text-center">{bar.day}</span>
               ))}

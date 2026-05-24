@@ -16,14 +16,14 @@ export default function ConfirmModal({ open, title, message, confirmLabel = 'Xá
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-overlay backdrop-blur-sm"
         onClick={onCancel}
       />
 
       {/* Modal card */}
-      <div className="relative bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full scale-100 opacity-100 transition-all duration-150">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">{title}</h2>
-        <p className="text-sm text-gray-600 mb-6">{message}</p>
+      <div className="relative bg-surface border border-border-subtle rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full scale-100 opacity-100 transition-all duration-150">
+        <h2 className="text-base font-semibold text-text-base mb-2">{title}</h2>
+        <p className="text-sm text-text-muted mb-6">{message}</p>
 
         <div className="flex flex-col gap-3">
           <button
@@ -34,7 +34,7 @@ export default function ConfirmModal({ open, title, message, confirmLabel = 'Xá
           </button>
           <button
             onClick={onCancel}
-            className="w-full border border-slate-200 text-gray-700 bg-white rounded-full py-3 font-medium text-sm"
+            className="w-full border border-border-subtle text-text-base bg-surface rounded-full py-3 font-medium text-sm hover:bg-surface-alt"
           >
             Huỷ
           </button>

@@ -215,7 +215,7 @@ export default function NewOrderPage() {
         allImages.forEach((img) => fd.append('images', img));
         fd.append('image_type', 'INTAKE');
         const token = localStorage.getItem('token');
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${firstOrderId}/images`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061'}/api/orders/${firstOrderId}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
@@ -232,13 +232,13 @@ export default function NewOrderPage() {
 
   return (
     <AuthGuard>
-      <div className="pb-24 min-h-screen bg-[#F8F9FB]">
+      <div className="pb-24 min-h-screen bg-bg">
         <PageHeader title="Tạo đơn mới" subtitle="Tạo đơn sửa chữa" onBack={() => router.back()} />
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
 
           {/* Branch */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <h2 className="font-bold text-slate-900 text-[15px] mb-3">Nơi nhập hàng</h2>
+          <div className="bg-surface rounded-3xl p-5 border border-border-subtle">
+            <h2 className="font-bold text-text-base text-[15px] mb-3">Nơi nhập hàng</h2>
             <SegmentedControl
               tabs={branches.map((b) => ({ label: b.name, value: b.id }))}
               active={branchId}
@@ -247,8 +247,8 @@ export default function NewOrderPage() {
           </div>
 
           {/* Customer type */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <h2 className="font-bold text-slate-900 text-[15px] mb-3">Loại khách hàng</h2>
+          <div className="bg-surface rounded-3xl p-5 border border-border-subtle">
+            <h2 className="font-bold text-text-base text-[15px] mb-3">Loại khách hàng</h2>
             <SegmentedControl
               tabs={[{ label: 'Khách lẻ', value: 'RETAIL' }, { label: 'Đối tác', value: 'PARTNER' }]}
               active={newCustomer.type}
@@ -257,21 +257,21 @@ export default function NewOrderPage() {
           </div>
 
           {/* Customer info */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <h2 className="font-bold text-slate-900 text-[15px] mb-4">Thông tin khách hàng</h2>
+          <div className="bg-surface rounded-3xl p-5 border border-border-subtle">
+            <h2 className="font-bold text-text-base text-[15px] mb-4">Thông tin khách hàng</h2>
 
             {/* RH-66: Partner mode — pick from existing PARTNER customers */}
             {isPartnerMode && !selectedCustomer && (
               <>
                 {partnersLoading ? (
-                  <div className="flex items-center justify-center py-6 text-slate-400">
+                  <div className="flex items-center justify-center py-6 text-text-muted">
                     <Loader2 size={20} className="animate-spin mr-2" />
                     <span className="text-sm">Đang tải đối tác...</span>
                   </div>
                 ) : partners.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 text-sm">
+                  <div className="text-center py-6 text-text-muted text-sm">
                     <p className="mb-2">Chưa có đối tác nào.</p>
-                    <a href="/customers" className="text-[#004EAB] font-medium">Tạo đối tác mới</a>
+                    <a href="/customers" className="text-accent font-medium">Tạo đối tác mới</a>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -280,10 +280,10 @@ export default function NewOrderPage() {
                         key={p.id}
                         type="button"
                         onClick={() => selectCustomer(p)}
-                        className="w-full text-left p-4 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm transition-colors active:bg-slate-100"
+                        className="w-full text-left p-4 rounded-xl border border-border-subtle bg-surface-alt text-sm transition-colors active:bg-surface"
                       >
-                        <p className="font-semibold text-slate-900">{p.name}</p>
-                        <p className="text-slate-500 text-xs mt-0.5">{p.phone}{p.address ? ` · ${p.address}` : ''}</p>
+                        <p className="font-semibold text-text-base">{p.name}</p>
+                        <p className="text-text-muted text-xs mt-0.5">{p.phone}{p.address ? ` · ${p.address}` : ''}</p>
                       </button>
                     ))}
                   </div>
@@ -300,17 +300,17 @@ export default function NewOrderPage() {
                     value={customerQuery}
                     onChange={(e) => { setCustomerQuery(e.target.value); setSelectedCustomer(null); setNewCustomer((p) => ({ ...p, phone: e.target.value })); }}
                     placeholder="Số điện thoại *"
-                    className="w-full px-4 py-3 pr-10 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]"
+                    className="w-full px-4 py-3 pr-10 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted"
                     required
                   />
                   {searchLoading && (
-                    <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" aria-label="Đang tìm" />
+                    <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted animate-spin" aria-label="Đang tìm" />
                   )}
                   {suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-xl z-10 mt-1 border border-slate-100">
+                    <div className="absolute top-full left-0 right-0 bg-surface border border-border-subtle rounded-xl z-10 mt-1">
                       {suggestions.map((s) => (
                         <button key={s.id} type="button" onClick={() => selectCustomer(s)}
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-surface-alt border-b border-border-subtle last:border-0 text-text-base">
                           <span className="font-medium">{s.phone}</span> — {s.name}
                         </button>
                       ))}
@@ -321,7 +321,7 @@ export default function NewOrderPage() {
                   <div className="mt-3 space-y-2">
                     <input value={newCustomer.name} onChange={(e) => setNewCustomer((p) => ({ ...p, name: e.target.value }))}
                       placeholder="Tên khách hàng *"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                      className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted" />
                   </div>
                 )}
               </>
@@ -329,25 +329,25 @@ export default function NewOrderPage() {
 
             {/* Selected customer summary — same for both modes */}
             {selectedCustomer && (
-              <div className="mt-2 p-3 bg-blue-50 rounded-xl text-sm">
-                <p className="font-medium text-[#004EAB]">{selectedCustomer.name}</p>
-                <p className="text-slate-600 text-xs">{selectedCustomer.type === 'RETAIL' ? 'Khách lẻ' : 'Đối tác'}</p>
+              <div className="mt-2 p-3 bg-accent/10 rounded-xl text-sm">
+                <p className="font-medium text-accent">{selectedCustomer.name}</p>
+                <p className="text-text-muted text-xs">{selectedCustomer.type === 'RETAIL' ? 'Khách lẻ' : 'Đối tác'}</p>
                 <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerQuery(''); }}
-                  className="text-xs text-red-500 mt-1">Xoá chọn</button>
+                  className="text-xs text-red-400 mt-1">Xoá chọn</button>
               </div>
             )}
           </div>
 
           {/* Products */}
           {products.map((product, idx) => (
-            <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
+            <div key={idx} className="bg-surface rounded-3xl p-5 border border-border-subtle space-y-3">
               <div className="flex justify-between items-center">
-                <h2 className="font-bold text-slate-900 text-[15px]">
+                <h2 className="font-bold text-text-base text-[15px]">
                   {products.length > 1 ? `Sản phẩm ${idx + 1}` : 'Sản phẩm'}
                 </h2>
                 {products.length > 1 && (
                   <button type="button" onClick={() => removeProduct(idx)}
-                    className="text-xs text-red-500 font-medium">Xoá</button>
+                    className="text-xs text-red-400 font-medium">Xoá</button>
                 )}
               </div>
 
@@ -361,19 +361,19 @@ export default function NewOrderPage() {
               {product.product_type === 'BAO_HANH' ? (
                 <div className="space-y-2">
                   {!customerQuery ? (
-                    <p className="text-sm text-slate-400 text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
+                    <p className="text-sm text-text-muted text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
                   ) : bhSearching ? (
-                    <p className="text-sm text-slate-400 text-center py-4">Đang tìm kiếm...</p>
+                    <p className="text-sm text-text-muted text-center py-4">Đang tìm kiếm...</p>
                   ) : bhWarranties.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-slate-600">{customerQuery}</span></p>
+                    <p className="text-sm text-text-muted text-center py-4">Không tìm thấy bảo hành cho số <span className="font-medium text-text-base">{customerQuery}</span></p>
                   ) : bhWarranties.map((w) => (
                     <button key={w.id} type="button"
                       onClick={() => setSelectedWarranty(selectedWarranty?.id === w.id ? null : w)}
-                      className={`w-full text-left p-4 rounded-xl border text-sm transition-colors ${selectedWarranty?.id === w.id ? 'border-[#004EAB] bg-blue-50' : 'border-slate-200 bg-[#f8fafc]'}`}>
-                      <p className="font-semibold text-slate-900">{w.order_code}</p>
-                      <p className="text-slate-600 text-xs mt-0.5">{w.device_name}</p>
+                      className={`w-full text-left p-4 rounded-xl border text-sm transition-colors ${selectedWarranty?.id === w.id ? 'border-accent bg-accent/10' : 'border-border-subtle bg-surface-alt'}`}>
+                      <p className="font-semibold text-text-base">{w.order_code}</p>
+                      <p className="text-text-muted text-xs mt-0.5">{w.device_name}</p>
                       {w.warranty_end_date && (
-                        <p className="text-xs text-slate-400 mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                        <p className="text-xs text-text-muted mt-0.5">Hết HH: {new Date(w.warranty_end_date).toLocaleDateString('vi-VN')}</p>
                       )}
                     </button>
                   ))}
@@ -382,21 +382,21 @@ export default function NewOrderPage() {
                 <>
                   <input value={product.device_name} onChange={(e) => updateProduct(idx, 'device_name', e.target.value)}
                     placeholder="Tên thiết bị *" required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                    className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted" />
                   <input value={product.serial_imei} onChange={(e) => updateProduct(idx, 'serial_imei', e.target.value)}
                     placeholder="Serial / IMEI"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                    className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted" />
                   <input value={product.accessories} onChange={(e) => updateProduct(idx, 'accessories', e.target.value)}
                     placeholder="Phụ kiện kèm theo"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB]" />
+                    className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted" />
                   <textarea value={product.fault_description} onChange={(e) => updateProduct(idx, 'fault_description', e.target.value)}
                     placeholder="Mô tả lỗi *" required rows={3}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
+                    className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted resize-none" />
 
                   {/* Images */}
                   <div>
-                    <p className="text-xs text-slate-500 mb-2">Ảnh tiếp nhận</p>
-                    <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
+                    <p className="text-xs text-text-muted mb-2">Ảnh tiếp nhận</p>
+                    <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
                       <Upload size={20} className="mb-2" />
                       <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                       {/* No `capture` attr — that would force camera-only on mobile.
@@ -429,7 +429,7 @@ export default function NewOrderPage() {
 
           {!isBaoHanhMode && (
             <button type="button" onClick={addProduct}
-              className="w-full py-3 rounded-full border-2 border-dashed border-slate-200 text-slate-500 text-sm font-medium flex items-center justify-center gap-2">
+              className="w-full py-3 rounded-full border-2 border-dashed border-border-subtle text-text-muted text-sm font-medium flex items-center justify-center gap-2">
               <Plus size={18} /> Thêm sản phẩm
             </button>
           )}
@@ -438,12 +438,12 @@ export default function NewOrderPage() {
 
           {isBaoHanhMode ? (
             <button type="button" onClick={handleBhSubmit} disabled={loading || !selectedWarranty}
-              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted">
               {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
             </button>
           ) : (
             <button type="submit" disabled={!canSubmit}
-              className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+              className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted">
               {loading ? 'Đang tạo đơn...' : 'Tạo đơn hàng'}
             </button>
           )}

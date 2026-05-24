@@ -93,7 +93,7 @@ describe('DashboardPage', () => {
     const { container } = render(<DashboardPage />);
     const stickyDiv = container.querySelector('.sticky.top-0.z-10');
     expect(stickyDiv).toBeInTheDocument();
-    expect(stickyDiv).toHaveClass('bg-[#F8F9FB]');
+    expect(stickyDiv).toHaveClass('bg-bg');
   });
 
   it('does not render old inline h1 header outside PageHeader', () => {
