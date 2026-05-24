@@ -34,34 +34,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-full bg-[#1565C0] flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
+    <div className="h-full bg-bg flex items-center justify-center px-4">
+      <div className="bg-surface border border-border-subtle rounded-2xl shadow-xl p-8 w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">🔧</div>
-          <h1 className="text-2xl font-bold text-[#1565C0]">RepairHub</h1>
-          <p className="text-gray-500 text-sm mt-1">Quản lý sửa chữa thiết bị</p>
+          <h1 className="text-2xl font-bold text-accent">RepairHub</h1>
+          <p className="text-text-muted text-sm mt-1">Quản lý sửa chữa thiết bị</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập</label>
+            <label className="block text-sm font-medium text-text-muted mb-1">Tên đăng nhập</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-[#1565C0] text-base"
+              className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface outline-none focus:border-accent caret-accent placeholder:text-text-muted text-text-base text-base"
               placeholder="Nhập tên đăng nhập"
               required
               autoComplete="username"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+            <label className="block text-sm font-medium text-text-muted mb-1">Mật khẩu</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-[#1565C0] text-base"
+              className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface outline-none focus:border-accent caret-accent placeholder:text-text-muted text-text-base text-base"
               placeholder="Nhập mật khẩu"
               required
               autoComplete="current-password"
@@ -73,7 +73,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#1565C0] text-white py-3 rounded-xl font-semibold text-base disabled:opacity-60 mt-2"
+            className="w-full bg-accent text-[#0B0B0B] py-3 rounded-xl font-semibold text-base disabled:bg-surface disabled:text-text-muted mt-2"
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>

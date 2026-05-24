@@ -46,20 +46,20 @@ function relativeTime(iso: string): string {
 function StatusBadge({ status }: { status: RevenueReport['status'] }) {
   if (status === 'done') {
     return (
-      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+      <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 font-medium">
         Hoàn thành
       </span>
     );
   }
   if (status === 'pending') {
     return (
-      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+      <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent font-medium">
         Đang tạo
       </span>
     );
   }
   return (
-    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
+    <span className="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 font-medium">
       Lỗi
     </span>
   );
@@ -132,7 +132,7 @@ export default function ReportsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader
           title="Báo cáo doanh thu"
           onBack={() => router.push('/settings')}
@@ -140,7 +140,7 @@ export default function ReportsPage() {
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#715DF2] text-white rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-[#0B0B0B] rounded-xl text-sm font-medium disabled:bg-surface disabled:text-text-muted disabled:cursor-not-allowed"
               aria-label="Tạo báo cáo"
             >
               {generating ? (
@@ -155,7 +155,7 @@ export default function ReportsPage() {
           {errorMsg && (
             <div
               role="alert"
-              className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3"
+              className="bg-red-900/30 border border-red-800 text-red-400 text-sm rounded-xl px-4 py-3"
             >
               {errorMsg}
             </div>
@@ -164,7 +164,7 @@ export default function ReportsPage() {
           {loading && <Spinner />}
 
           {!loading && reports.length === 0 && (
-            <p className="text-center text-slate-400 text-sm py-12">
+            <p className="text-center text-text-muted text-sm py-12">
               Chưa có báo cáo nào
             </p>
           )}
@@ -172,13 +172,13 @@ export default function ReportsPage() {
           {reports.map((report) => (
             <div
               key={report.id}
-              className="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-3.5 flex items-center gap-3"
+              className="bg-surface rounded-2xl border border-border-subtle px-4 py-3.5 flex items-center gap-3"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-text-base">
                   {formatDate(report.period_start)} – {formatDate(report.period_end)}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-text-muted mt-0.5">
                   {relativeTime(report.generated_at)}
                 </p>
                 <div className="mt-1.5">
@@ -190,7 +190,7 @@ export default function ReportsPage() {
                 <button
                   onClick={() => handleDownload(report)}
                   aria-label="Tải xuống"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-medium active:bg-slate-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-subtle text-text-muted text-xs font-medium active:bg-surface-alt"
                 >
                   <Download size={13} />
                   <span>Tải xuống</span>

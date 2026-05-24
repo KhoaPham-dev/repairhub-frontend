@@ -120,39 +120,41 @@ function OrdersPageInner() {
     return `${Math.floor(diffMs / 86_400_000)} ngày trước`;
   }
 
+  void counts;
+
   return (
     <AuthGuard>
       <div className="pb-24">
         {/* Sticky header */}
-        <div className="sticky top-0 z-10 bg-[#F8F9FB]">
+        <div className="sticky top-0 z-10 bg-bg">
           <PageHeader title="Đơn hàng" subtitle={`${orders.length} đơn`} />
           <div className="px-4 pb-3 space-y-2">
             {/* Search bar */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search size={18} className="text-slate-400" />
+                <Search size={18} className="text-text-muted" />
               </div>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm theo tên thiết bị, SĐT, serial..."
-                className="block w-full pl-11 pr-4 py-3 bg-white rounded-2xl text-sm placeholder:text-slate-400 shadow-sm border border-slate-100 outline-none focus:border-[#004EAB] transition-colors"
+                className="block w-full pl-11 pr-4 py-3 bg-surface rounded-2xl text-sm placeholder:text-text-muted border border-border-subtle outline-none focus:border-accent transition-colors text-text-base"
               />
             </div>
 
             {/* Status tabs + sort toggle */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1 min-w-0 pb-1">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 shrink-0">Trạng thái</span>
+                <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mr-2 shrink-0">Trạng thái</span>
                 {FILTERS.map((f) => (
                   <button
                     key={f.key}
                     onClick={() => setStatus(f.key)}
                     className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                       status === f.key
-                        ? 'bg-white shadow-sm text-slate-900'
-                        : 'text-slate-500'
+                        ? 'bg-accent text-[#0B0B0B] shadow-sm'
+                        : 'text-text-muted hover:text-text-base'
                     }`}
                   >
                     {f.label}
@@ -164,7 +166,7 @@ function OrdersPageInner() {
                 onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
                 aria-label={sortDir === 'desc' ? 'Sắp xếp mới nhất trước' : 'Sắp xếp cũ nhất trước'}
                 title={sortDir === 'desc' ? 'Mới nhất trước' : 'Cũ nhất trước'}
-                className="shrink-0 w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm border border-slate-100 text-slate-600 active:bg-slate-50"
+                className="shrink-0 w-10 h-10 flex items-center justify-center bg-surface rounded-full border border-border-subtle text-text-muted active:bg-surface-alt"
               >
                 {sortDir === 'desc'
                   ? <ArrowDownNarrowWide size={18} />
@@ -178,7 +180,7 @@ function OrdersPageInner() {
         <div className="px-4 space-y-4">
           {loading && orders.length === 0 && <Spinner />}
           {!loading && orders.length === 0 && (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-text-muted">
               <div className="text-4xl mb-2">📋</div>
               <div>Chưa có đơn hàng nào</div>
             </div>
@@ -187,45 +189,45 @@ function OrdersPageInner() {
             <div
               key={order.id}
               onClick={() => router.push(`/orders/${order.id}`)}
-              className={`bg-white rounded-2xl p-4 shadow-sm active:bg-slate-50 cursor-pointer transition-colors ${
+              className={`bg-surface rounded-2xl p-4 active:bg-surface-alt cursor-pointer transition-colors ${
                 order.priority === 'HIGH'
                   ? 'border-2 border-red-500'
                   : order.priority === 'MEDIUM'
                     ? 'border-2 border-yellow-400'
-                    : 'border border-slate-100'
+                    : 'border border-border-subtle'
               }`}
             >
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-sm font-semibold text-slate-900">
-                  {order.order_code} <span className="font-normal text-slate-500">nhận ngày {new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
+                <h3 className="text-sm font-semibold text-text-base">
+                  {order.order_code} <span className="font-normal text-text-muted">nhận ngày {new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
                 </h3>
               </div>
-              <p className="text-sm text-slate-700 mb-1">{order.customer_name} · {order.customer_phone}</p>
+              <p className="text-sm text-text-base mb-1">{order.customer_name} · {order.customer_phone}</p>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-slate-700">{order.device_name}</p>
-                <ChevronRight size={18} className="text-slate-300" />
+                <p className="text-sm text-text-base">{order.device_name}</p>
+                <ChevronRight size={18} className="text-text-muted" />
               </div>
               <div className="flex items-center gap-2">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                  order.status === 'DA_GIAO' ? 'bg-[#E0F2E9] text-[#1D7F54]' :
-                  order.status === 'HUY_TRA_MAY' ? 'bg-red-50 text-red-600' :
-                  order.status === 'DANG_BAO_HANH' ? 'bg-purple-50 text-purple-600' :
-                  'bg-[#EAEFFF] text-[#004EAB]'
+                  order.status === 'DA_GIAO' ? 'bg-green-900/40 text-green-400' :
+                  order.status === 'HUY_TRA_MAY' ? 'bg-red-900/40 text-red-400' :
+                  order.status === 'DANG_BAO_HANH' ? 'bg-purple-900/40 text-purple-400' :
+                  'bg-accent/10 text-accent'
                 }`}>
                   {STATUS_LABELS[order.status] ?? order.status}
                 </span>
                 {order.priority && (
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
                     order.priority === 'HIGH'
-                      ? 'bg-red-50 text-red-600'
+                      ? 'bg-red-900/40 text-red-400'
                       : order.priority === 'MEDIUM'
-                        ? 'bg-yellow-50 text-yellow-600'
-                        : 'bg-slate-100 text-slate-600'
+                        ? 'bg-yellow-900/40 text-yellow-400'
+                        : 'bg-surface-alt text-text-muted'
                   }`}>
                     Ưu tiên {PRIORITY_LABELS[order.priority]}
                   </span>
                 )}
-                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-surface-alt text-text-muted">
                   {relativeTime(order.created_at)}
                 </span>
               </div>
@@ -236,7 +238,7 @@ function OrdersPageInner() {
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-4">
               {loading && orders.length > 0 && (
-                <Loader2 size={24} className="animate-spin text-slate-400" />
+                <Loader2 size={24} className="animate-spin text-text-muted" />
               )}
             </div>
           )}

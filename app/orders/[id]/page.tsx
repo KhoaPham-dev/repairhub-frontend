@@ -162,30 +162,30 @@ export default function OrderDetailPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader title={order.order_code} onBack={() => router.back()} />
 
         <div className="p-4 space-y-4">
           {/* Locked order info */}
           <Card>
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+              <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-full">
                 {STATUS_LABELS[order.status] ?? order.status}
               </span>
-              <span className="text-xs text-gray-400">{new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
+              <span className="text-xs text-text-muted">{new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
             </div>
             <div className="space-y-1 text-sm">
-              <p><span className="text-gray-500">Khách:</span> <span className="font-medium">{order.customer_name}</span></p>
-              <p><span className="text-gray-500">SĐT:</span> {/^[0-9+() \-]+$/.test(order.customer_phone) ? <a href={`tel:${order.customer_phone}`} className="text-[#004EAB] underline">{order.customer_phone}</a> : <span>{order.customer_phone}</span>}</p>
-              <p><span className="text-gray-500">Chi nhánh:</span> {order.branch_name}</p>
-              <p><span className="text-gray-500">Thiết bị:</span> {order.device_name}</p>
-              {order.serial_imei && <p><span className="text-gray-500">Serial:</span> {order.serial_imei}</p>}
-              <p><span className="text-gray-500">Lỗi:</span> {order.fault_description}</p>
+              <p><span className="text-text-muted">Khách:</span> <span className="font-medium text-text-base">{order.customer_name}</span></p>
+              <p><span className="text-text-muted">SĐT:</span> {/^[0-9+() \-]+$/.test(order.customer_phone) ? <a href={`tel:${order.customer_phone}`} className="text-accent underline">{order.customer_phone}</a> : <span className="text-text-base">{order.customer_phone}</span>}</p>
+              <p><span className="text-text-muted">Chi nhánh:</span> <span className="text-text-base">{order.branch_name}</span></p>
+              <p><span className="text-text-muted">Thiết bị:</span> <span className="text-text-base">{order.device_name}</span></p>
+              {order.serial_imei && <p><span className="text-text-muted">Serial:</span> <span className="text-text-base">{order.serial_imei}</span></p>}
+              <p><span className="text-text-muted">Lỗi:</span> <span className="text-text-base">{order.fault_description}</span></p>
               {order.warranty_end_date && (
-                <p><span className="text-gray-500">Bảo hành đến:</span> {new Date(order.warranty_end_date).toLocaleDateString('vi-VN')}</p>
+                <p><span className="text-text-muted">Bảo hành đến:</span> <span className="text-text-base">{new Date(order.warranty_end_date).toLocaleDateString('vi-VN')}</span></p>
               )}
               {isTerminal && (
-                <p><span className="text-gray-500">Báo giá:</span> {Number(order.quotation) > 0 ? `${Math.round(Number(order.quotation)).toLocaleString('vi-VN')} đ` : 'Chưa có'}</p>
+                <p><span className="text-text-muted">Báo giá:</span> <span className="text-text-base">{Number(order.quotation) > 0 ? `${Math.round(Number(order.quotation)).toLocaleString('vi-VN')} đ` : 'Chưa có'}</span></p>
               )}
             </div>
           </Card>
@@ -193,14 +193,14 @@ export default function OrderDetailPage() {
           {/* Existing images (locked, click to view fullscreen) */}
           {order.images.length > 0 && (
             <Card>
-              <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ảnh đã lưu ({order.images.length})</h3>
+              <h3 className="font-semibold text-text-base mb-3 text-sm">Ảnh đã lưu ({order.images.length})</h3>
               <div className="grid grid-cols-3 gap-2">
                 {order.images.map((img, i) => (
                   <button
                     key={img.id}
                     type="button"
                     onClick={() => setLightboxIndex(i)}
-                    className="block w-full h-24 rounded-lg overflow-hidden bg-slate-100 active:opacity-80"
+                    className="block w-full h-24 rounded-lg overflow-hidden bg-surface-alt active:opacity-80"
                     aria-label="Mở ảnh đầy đủ"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -232,7 +232,7 @@ export default function OrderDetailPage() {
             <>
               {/* Quotation (appendable) */}
               <Card>
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Báo giá</h3>
+                <h3 className="font-semibold text-text-base mb-3 text-sm">Báo giá</h3>
                 <div className="relative">
                   <input type="text" inputMode="numeric" value={quotation ? formatMoney(Number(quotation)) : ''}
                     onChange={(e) => {
@@ -240,14 +240,14 @@ export default function OrderDetailPage() {
                       setQuotation(digits);
                     }}
                     placeholder="Nhập báo giá (VNĐ)"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-20" />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">.000 đ</span>
+                    className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted pr-20" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-muted">.000 đ</span>
                 </div>
               </Card>
 
               {/* Warranty duration (appendable) */}
               <Card>
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Bảo hành</h3>
+                <h3 className="font-semibold text-text-base mb-3 text-sm">Bảo hành</h3>
                 <SegmentedControl
                   tabs={WARRANTY_MONTHS_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
                   active={warrantyOption}
@@ -257,25 +257,25 @@ export default function OrderDetailPage() {
                   <div className="mt-3 relative">
                     <input type="number" value={customMonths} onChange={(e) => setCustomMonths(e.target.value)}
                       placeholder="Số tháng"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] pr-16" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">tháng</span>
+                      className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted pr-16" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-muted">tháng</span>
                   </div>
                 )}
               </Card>
 
               {/* Status change */}
               <Card>
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Cập nhật trạng thái</h3>
+                <h3 className="font-semibold text-text-base mb-3 text-sm">Cập nhật trạng thái</h3>
                 <div className="space-y-3">
                   <div className="relative">
                     <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] appearance-none pr-10">
+                      className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent appearance-none pr-10">
                       <option value="">Giữ nguyên trạng thái</option>
                       {UPDATABLE_STATUSES.filter((s) => s !== order.status).map((s) => (
                         <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                       ))}
                     </select>
-                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
                   </div>
                 </div>
               </Card>
@@ -284,7 +284,7 @@ export default function OrderDetailPage() {
               {order.status === 'TRA_HANG' && (
                 <button
                   onClick={() => { setNewStatus('HUY_TRA_MAY'); setConfirmOpen(true); }}
-                  className="w-full border-2 border-red-500 text-red-600 py-4 rounded-full font-semibold text-base bg-white shadow-sm"
+                  className="w-full border-2 border-red-500 text-red-400 py-4 rounded-full font-semibold text-base bg-transparent"
                 >
                   Huỷ trả máy
                 </button>
@@ -292,16 +292,16 @@ export default function OrderDetailPage() {
 
               {/* Notes (appendable) */}
               <Card>
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Ghi chú</h3>
+                <h3 className="font-semibold text-text-base mb-3 text-sm">Ghi chú</h3>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                   placeholder="Thêm ghi chú..." rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-[#f8fafc] text-sm outline-none focus:border-[#004EAB] focus:ring-1 focus:ring-[#004EAB] resize-none" />
+                  className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted resize-none" />
               </Card>
 
               {/* Image upload (appendable) */}
               <Card>
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">Thêm ảnh</h3>
-                <label className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-500 bg-[#f8fafc] cursor-pointer active:bg-slate-100 transition-colors">
+                <h3 className="font-semibold text-text-base mb-3 text-sm">Thêm ảnh</h3>
+                <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
                   <Upload size={20} className="mb-2" />
                   <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                   {/* No `capture` attr — that would force camera-only on mobile.
@@ -333,9 +333,9 @@ export default function OrderDetailPage() {
 
               {/* Action */}
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-              {success && <p className="text-green-600 text-sm text-center">{success}</p>}
+              {success && <p className="text-green-400 text-sm text-center">{success}</p>}
               <button onClick={handleUpdate} disabled={updating || !hasChanges}
-                className="w-full bg-[#004EAB] text-white py-4 rounded-full font-semibold text-base disabled:opacity-60 shadow-sm">
+                className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted">
                 {updating ? 'Đang cập nhật...' : 'Lưu thay đổi'}
               </button>
             </>
@@ -343,17 +343,17 @@ export default function OrderDetailPage() {
 
           {/* Status history (locked, always visible) */}
           <Card>
-            <h3 className="font-semibold text-gray-800 mb-3 text-sm">Lịch sử trạng thái</h3>
+            <h3 className="font-semibold text-text-base mb-3 text-sm">Lịch sử trạng thái</h3>
             <div className="space-y-3">
               {order.history.map((h) => (
                 <div key={h.id} className="flex gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-[#004EAB] mt-1.5 flex-shrink-0" />
+                  <div className="w-2 h-2 rounded-full bg-accent mt-1.5 flex-shrink-0" />
                   <div>
-                    <p className="text-gray-700">
+                    <p className="text-text-base">
                       {h.old_status ? `${STATUS_LABELS[h.old_status]} → ` : ''}{STATUS_LABELS[h.new_status] ?? h.new_status}
                     </p>
-                    <p className="text-xs text-gray-400">{h.changed_by_name} · {new Date(h.changed_at).toLocaleString('vi-VN')}</p>
-                    {h.notes && <p className="text-xs text-gray-500 mt-0.5 italic">{h.notes}</p>}
+                    <p className="text-xs text-text-muted">{h.changed_by_name} · {new Date(h.changed_at).toLocaleString('vi-VN')}</p>
+                    {h.notes && <p className="text-xs text-text-muted mt-0.5 italic">{h.notes}</p>}
                   </div>
                 </div>
               ))}

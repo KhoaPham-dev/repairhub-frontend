@@ -59,14 +59,14 @@ export default function StaffSettingsPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8F9FB] pb-24">
+      <div className="min-h-screen bg-bg pb-24">
         <PageHeader
           title="Nhân viên"
           onBack={() => router.push('/settings')}
           right={
             <button
               onClick={() => setShowForm((p) => !p)}
-              className="w-8 h-8 flex items-center justify-center bg-[#715DF2] text-white rounded-xl"
+              className="w-8 h-8 flex items-center justify-center bg-accent text-[#0B0B0B] rounded-xl"
             >
               <Plus size={18} strokeWidth={2.5} />
             </button>
@@ -75,18 +75,18 @@ export default function StaffSettingsPage() {
 
         <div className="px-4 pt-3 space-y-3">
           {showForm && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
-              <h3 className="font-semibold text-slate-900 text-sm">Thêm nhân viên mới</h3>
+            <div className="bg-surface rounded-2xl p-4 border border-border-subtle space-y-3">
+              <h3 className="font-semibold text-text-base text-sm">Thêm nhân viên mới</h3>
               <input value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))}
-                placeholder="Họ tên *" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#715DF2]" />
+                placeholder="Họ tên *" className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent caret-accent placeholder:text-text-muted" />
               <input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
-                placeholder="Tên đăng nhập *" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#715DF2]" />
+                placeholder="Tên đăng nhập *" className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent caret-accent placeholder:text-text-muted" />
               <input type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                placeholder="Mật khẩu *" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#715DF2]" />
+                placeholder="Mật khẩu *" className="w-full px-4 py-2.5 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent caret-accent placeholder:text-text-muted" />
               <div className="flex gap-2">
                 {[['TECHNICIAN', 'Kỹ thuật viên'], ['ADMIN', 'Quản trị viên']].map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setForm((p) => ({ ...p, role: v }))}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${form.role === v ? 'bg-[#715DF2] text-white border-[#715DF2]' : 'bg-white text-slate-600 border-slate-200'}`}>
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${form.role === v ? 'bg-accent text-[#0B0B0B] border-accent' : 'bg-surface text-text-muted border-border-subtle hover:text-text-base'}`}>
                     {l}
                   </button>
                 ))}
@@ -94,9 +94,9 @@ export default function StaffSettingsPage() {
               {error && <p className="text-red-500 text-xs">{error}</p>}
               <div className="flex gap-2">
                 <button onClick={() => { setShowForm(false); setError(''); }}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium">Huỷ</button>
+                  className="flex-1 py-2.5 rounded-xl border border-border-subtle text-text-muted text-sm font-medium hover:text-text-base">Huỷ</button>
                 <button onClick={createUser}
-                  className="flex-1 py-2.5 rounded-xl bg-[#715DF2] text-white text-sm font-semibold">Tạo tài khoản</button>
+                  className="flex-1 py-2.5 rounded-xl bg-accent text-[#0B0B0B] text-sm font-semibold">Tạo tài khoản</button>
               </div>
             </div>
           )}
@@ -107,22 +107,22 @@ export default function StaffSettingsPage() {
             <Card key={u.id}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold text-slate-900">{u.full_name}</p>
-                  <p className="text-sm text-slate-500">@{u.username}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                  <p className="font-semibold text-text-base">{u.full_name}</p>
+                  <p className="text-sm text-text-muted">@{u.username}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${u.role === 'ADMIN' ? 'bg-purple-900/40 text-purple-400' : 'bg-accent/10 text-accent'}`}>
                     {u.role === 'ADMIN' ? 'Quản trị viên' : 'Kỹ thuật viên'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1.5 items-end">
                   <button
                     onClick={() => router.push(`/settings/change-password?userId=${u.id}`)}
-                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600"
+                    className="text-xs px-3 py-1.5 rounded-xl border border-border-subtle text-text-muted hover:text-text-base"
                   >
                     Đổi mật khẩu
                   </button>
                   {u.id !== currentUser?.id && (
                     <button onClick={() => toggleUser(u)}
-                      className={`text-xs px-3 py-1.5 rounded-xl border ${u.is_active ? 'border-red-200 text-red-600' : 'border-green-200 text-green-600'}`}>
+                      className={`text-xs px-3 py-1.5 rounded-xl border ${u.is_active ? 'border-red-800 text-red-400' : 'border-green-800 text-green-400'}`}>
                       {u.is_active ? 'Khoá' : 'Mở khoá'}
                     </button>
                   )}
