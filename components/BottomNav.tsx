@@ -40,7 +40,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="shrink-0 bg-surface-alt border-t border-border-subtle rounded-t-2xl"
+      className="shrink-0 bg-surface-alt rounded-t-2xl"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
     >
       <div className="flex items-center justify-between px-4 py-2 relative">
