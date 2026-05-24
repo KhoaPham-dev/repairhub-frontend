@@ -11,7 +11,7 @@ interface Props {
 
 export default function SegmentedControl({ tabs, active, onChange, className = '' }: Props) {
   return (
-    <div className={`flex bg-[#F1F5F9] rounded-full p-1 w-full ${className}`}>
+    <div className={`flex bg-surface rounded-full p-1 w-full ${className}`}>
       {tabs.map((tab) => (
         <button
           key={tab.value}
@@ -19,8 +19,8 @@ export default function SegmentedControl({ tabs, active, onChange, className = '
           onClick={() => onChange(tab.value)}
           className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all ${
             active === tab.value
-              ? 'bg-[#004EAB] text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-accent text-[#0B0B0B] shadow-sm'
+              : 'text-text-muted hover:text-text-base'
           }`}
         >
           {tab.label}
