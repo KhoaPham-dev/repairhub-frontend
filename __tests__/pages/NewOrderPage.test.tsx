@@ -57,7 +57,7 @@ describe('NewOrderPage', () => {
     await waitFor(() => screen.getByText('Chi nhánh 2'));
     const btn = screen.getByText('Chi nhánh 2');
     fireEvent.click(btn);
-    expect(btn.className).toContain('bg-[#004EAB]');
+    expect(btn.className).toContain('bg-accent');
   });
 
   it('renders product type buttons (Loa, Tai nghe, Bảo Hành)', async () => {
@@ -211,7 +211,7 @@ describe('NewOrderPage', () => {
     await waitFor(() => screen.getByText('Khách lẻ'));
     const partnerBtn = screen.getByText('Đối tác');
     fireEvent.click(partnerBtn);
-    expect(partnerBtn.className).toContain('bg-[#004EAB]');
+    expect(partnerBtn.className).toContain('bg-accent');
   });
 
   it('selecting Đối tác shows the partner list (RH-66)', async () => {

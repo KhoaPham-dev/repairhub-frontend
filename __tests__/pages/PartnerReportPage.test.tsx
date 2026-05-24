@@ -154,7 +154,7 @@ describe('PartnerReportPage — date preset buttons', () => {
     render(<PartnerReportPage />);
     await waitFor(() => expect(mockGet).toHaveBeenCalled());
     const monthBtn = screen.getByRole('button', { name: 'Tháng này' });
-    expect(monthBtn.className).toContain('bg-[#715DF2]');
+    expect(monthBtn.className).toContain('bg-accent');
   });
 
   it('switches to "Tuần này" when clicked', async () => {
@@ -162,8 +162,8 @@ describe('PartnerReportPage — date preset buttons', () => {
     render(<PartnerReportPage />);
     await waitFor(() => expect(mockGet).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: 'Tuần này' }));
-    expect(screen.getByRole('button', { name: 'Tuần này' }).className).toContain('bg-[#715DF2]');
-    expect(screen.getByRole('button', { name: 'Tháng này' }).className).not.toContain('bg-[#715DF2]');
+    expect(screen.getByRole('button', { name: 'Tuần này' }).className).toContain('bg-accent');
+    expect(screen.getByRole('button', { name: 'Tháng này' }).className).not.toContain('bg-accent');
   });
 
   it('switches to "Tuỳ chọn" when clicked', async () => {
@@ -171,7 +171,7 @@ describe('PartnerReportPage — date preset buttons', () => {
     render(<PartnerReportPage />);
     await waitFor(() => expect(mockGet).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: 'Tuỳ chọn' }));
-    expect(screen.getByRole('button', { name: 'Tuỳ chọn' }).className).toContain('bg-[#715DF2]');
+    expect(screen.getByRole('button', { name: 'Tuỳ chọn' }).className).toContain('bg-accent');
   });
 });
 

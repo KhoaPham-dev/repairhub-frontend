@@ -109,14 +109,14 @@ describe('OrderDetailPage', () => {
     });
   });
 
-  it('renders outer wrapper with bg-[#F8F9FB] and pb-24 classes', async () => {
+  it('renders outer wrapper with bg-bg and pb-24 classes', async () => {
     const { container } = render(<OrderDetailPage />);
     await waitFor(() => {
       // Wait for the order to load so the outer div is rendered
       screen.getByRole('heading', { name: 'RH-001' });
     });
     // The AuthGuard is mocked to a passthrough; the first child is the outer div
-    const outerDiv = container.querySelector('.min-h-screen.bg-\\[\\#F8F9FB\\].pb-24');
+    const outerDiv = container.querySelector('.min-h-screen.bg-bg.pb-24');
     expect(outerDiv).toBeInTheDocument();
   });
 
