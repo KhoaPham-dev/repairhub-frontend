@@ -34,12 +34,13 @@ body {
   transition-timing-function: ease-in-out;
 }
 
-/* RH-65: iOS Safari auto-zooms when focusing an input/textarea/select
-   whose font-size is < 16px. Tailwind's `text-sm` (14px) on form fields
-   triggered this on every focus. Forcing 16px globally on form fields
-   suppresses the zoom without affecting the rest of the layout. */
+/* RH-65: iOS Safari + iOS Chrome (both WebKit) auto-zoom when focusing
+   an input/textarea/select whose font-size is < 16px. Tailwind's
+   `text-sm`/`text-xs` on form fields beats a plain element-selector rule
+   on specificity, so `!important` is required to actually win. This is
+   the standard documented workaround for the iOS focus-zoom quirk. */
 input, textarea, select {
-  font-size: 16px;
+  font-size: 16px !important;
 }
 
 /* Custom scrollbar */
