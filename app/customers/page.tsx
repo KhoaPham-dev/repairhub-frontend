@@ -151,7 +151,7 @@ export default function CustomersPage() {
                   <p className="text-sm text-text-muted">{c.phone}</p>
                   {c.address && <p className="text-xs text-text-muted mt-0.5">{c.address}</p>}
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${c.type === 'PARTNER' ? 'bg-purple-900/40 text-purple-400' : 'bg-surface-alt text-text-muted'}`}>
+                <span className={`shrink-0 whitespace-nowrap text-xs px-2 py-0.5 rounded-full ${c.type === 'PARTNER' ? 'bg-accent/20 text-accent' : 'bg-surface-alt text-text-muted'}`}>
                   {c.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}
                 </span>
               </div>

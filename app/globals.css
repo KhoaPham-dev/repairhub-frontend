@@ -59,8 +59,15 @@ input, textarea, select {
   scrollbar-color: var(--accent) transparent;
 }
 
-/* Focus ring — gold accent, visible only on keyboard navigation */
+/* Focus ring — gold accent, visible only on keyboard navigation.
+   Form fields manage their own focus via border-accent, so suppress the
+   outline there to avoid a double ring sitting outside their rounded edge. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
