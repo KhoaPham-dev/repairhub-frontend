@@ -22,7 +22,6 @@ interface Order {
 }
 
 interface ApiResponse { success: boolean; data: Order[] }
-interface CountResponse { success: boolean; data: Record<string, number> }
 
 const STATUS_LABELS: Record<string, string> = {
   TIEP_NHAN:     'Tiếp nhận',
@@ -57,7 +56,6 @@ function OrdersPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [status, setStatus] = useState(searchParams.get('status') ?? '');
   const rawSort = searchParams.get('sort');
@@ -107,10 +105,6 @@ function OrdersPageInner() {
     pageSize: LIMIT,
   });
 
-  useEffect(() => {
-    api.get<CountResponse>('/orders/status-counts').then((r) => setCounts(r.data)).catch(() => null);
-  }, []);
-
   // Relative time: "Vừa xong" < 60s; "X giờ trước" < 24h; "X ngày trước" otherwise.
   function relativeTime(iso: string): string {
     const diffMs = Date.now() - new Date(iso).getTime();
@@ -119,8 +113,6 @@ function OrdersPageInner() {
     if (hours < 24) return `${Math.max(1, hours)} giờ trước`;
     return `${Math.floor(diffMs / 86_400_000)} ngày trước`;
   }
-
-  void counts;
 
   return (
     <AuthGuard>
