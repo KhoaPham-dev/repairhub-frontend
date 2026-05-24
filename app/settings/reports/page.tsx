@@ -9,7 +9,7 @@ import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
 import { isAdmin, getToken } from '@/lib/auth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
 
 export interface RevenueReport {
   id: string;

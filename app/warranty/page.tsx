@@ -20,7 +20,7 @@ interface WarrantyResult {
 
 interface ApiResponse { success: boolean; data: WarrantyResult[] }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
 
 export default function WarrantyPage() {
   const router = useRouter();

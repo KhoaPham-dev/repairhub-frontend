@@ -134,7 +134,7 @@ export default function OrderDetailPage() {
         newImages.forEach((f) => fd.append('images', f));
         fd.append('image_type', 'COMPLETION');
         const token = localStorage.getItem('token');
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${id}/images`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061'}/api/orders/${id}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
@@ -155,7 +155,7 @@ export default function OrderDetailPage() {
   if (!order) return <AuthGuard><Spinner /></AuthGuard>;
 
   const isTerminal = TERMINAL.includes(order.status);
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
   const hasChanges = !!(newStatus || notes.trim() || newImages.length > 0 ||
     parseMoney(quotation) * 1000 !== Math.round(Number(order.quotation)) ||
     (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
