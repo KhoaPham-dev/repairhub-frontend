@@ -214,7 +214,8 @@ describe('OrderDetailPage', () => {
     const sourceHistory = [
       {
         id: 'sh1',
-        changed_by: 'Tech A',
+        changed_by: 'uuid-tech-a',
+        changed_by_name: 'Tech A',
         old_status: null,
         new_status: 'TIEP_NHAN',
         notes: 'Ghi chú nguồn',
@@ -222,7 +223,8 @@ describe('OrderDetailPage', () => {
       },
       {
         id: 'sh2',
-        changed_by: 'Tech B',
+        changed_by: 'uuid-tech-b',
+        changed_by_name: 'Tech B',
         old_status: 'TIEP_NHAN',
         new_status: 'SUA_XONG',
         notes: null,

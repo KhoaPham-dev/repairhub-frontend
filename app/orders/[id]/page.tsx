@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 interface SourceOrderHistoryEntry {
   id: string;
   changed_by: string;
+  changed_by_name: string;
   old_status: string | null;
   new_status: string;
   notes: string | null;
@@ -385,7 +386,7 @@ export default function OrderDetailPage() {
                       <p className="text-text-base">
                         {h.old_status ? `${STATUS_LABELS[h.old_status] ?? h.old_status} → ` : ''}{STATUS_LABELS[h.new_status] ?? h.new_status}
                       </p>
-                      <p className="text-xs text-text-muted">{h.changed_by} · {new Date(h.changed_at).toLocaleString('vi-VN')}</p>
+                      <p className="text-xs text-text-muted">{h.changed_by_name} · {new Date(h.changed_at).toLocaleString('vi-VN')}</p>
                       {h.notes && <p className="text-xs text-text-muted mt-0.5 italic">{h.notes}</p>}
                     </div>
                   </div>
