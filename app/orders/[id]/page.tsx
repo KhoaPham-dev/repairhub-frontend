@@ -33,6 +33,7 @@ interface OrderDetail {
   history: { id: string; old_status: string; new_status: string; changed_by_name: string; changed_at: string; notes: string }[];
   images: { id: string; image_path: string; image_type: string }[];
   source_order_history: SourceOrderHistoryEntry[] | null;
+  source_order_id: string | null;
 }
 
 interface ApiResponse<T> { success: boolean; data: T }
@@ -374,9 +375,19 @@ export default function OrderDetailPage() {
           {/* Source order history — only for warranty orders (-BH) with linked source */}
           {order.source_order_history !== null && order.source_order_history.length > 0 && (
             <Card>
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="font-semibold text-text-base text-sm">Lịch sử đơn gốc</h3>
-                <span className="text-xs bg-surface-alt text-text-muted px-2 py-0.5 rounded-full border border-border-subtle">đơn gốc</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-text-base text-sm">Lịch sử đơn gốc</h3>
+                  <span className="text-xs bg-surface-alt text-text-muted px-2 py-0.5 rounded-full border border-border-subtle">đơn gốc</span>
+                </div>
+                {order.source_order_id && (
+                  <a
+                    href={`/orders/${order.source_order_id}`}
+                    className="text-xs text-accent underline-offset-2 hover:underline"
+                  >
+                    Xem đơn gốc →
+                  </a>
+                )}
               </div>
               <div className="space-y-3">
                 {order.source_order_history.map((h) => (
