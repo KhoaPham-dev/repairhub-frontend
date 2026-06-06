@@ -382,7 +382,7 @@ export default function NewOrderPage() {
               />
 
               {product.product_type === 'BAO_HANH' ? (
-                <div className="space-y-2">
+                <div className="max-h-64 overflow-y-auto space-y-2">
                   {!customerQuery ? (
                     <p className="text-sm text-text-muted text-center py-4">Vui lòng nhập số điện thoại khách hàng ở trên</p>
                   ) : bhSearching ? (
