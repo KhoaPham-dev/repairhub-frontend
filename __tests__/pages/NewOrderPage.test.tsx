@@ -246,6 +246,112 @@ describe('NewOrderPage', () => {
     });
   });
 
+  it('RH-131: partner search input appears and filters by name', async () => {
+    const partnersData = [
+      { id: 'p1', phone: '0900000001', name: 'Acme Corp', address: 'HCM', type: 'PARTNER', notes: '' },
+      { id: 'p2', phone: '0900000002', name: 'Foo Ltd', address: '', type: 'PARTNER', notes: '' },
+    ];
+    mockGet
+      .mockResolvedValueOnce({ data: BRANCHES })
+      .mockResolvedValueOnce({ data: partnersData });
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Đối tác'));
+    fireEvent.click(screen.getByText('Đối tác'));
+
+    // Wait for partner list to load
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+      expect(screen.getByText('Foo Ltd')).toBeInTheDocument();
+    });
+
+    // Search input should be present
+    const searchInput = screen.getByPlaceholderText('Tìm theo tên hoặc số điện thoại...');
+    expect(searchInput).toBeInTheDocument();
+
+    // Filter by name
+    fireEvent.change(searchInput, { target: { value: 'Acme' } });
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+      expect(screen.queryByText('Foo Ltd')).not.toBeInTheDocument();
+    });
+  });
+
+  it('RH-131: partner search filters by phone number', async () => {
+    const partnersData = [
+      { id: 'p1', phone: '0900000001', name: 'Acme Corp', address: 'HCM', type: 'PARTNER', notes: '' },
+      { id: 'p2', phone: '0900000002', name: 'Foo Ltd', address: '', type: 'PARTNER', notes: '' },
+    ];
+    mockGet
+      .mockResolvedValueOnce({ data: BRANCHES })
+      .mockResolvedValueOnce({ data: partnersData });
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Đối tác'));
+    fireEvent.click(screen.getByText('Đối tác'));
+
+    await waitFor(() => screen.getByText('Acme Corp'));
+
+    const searchInput = screen.getByPlaceholderText('Tìm theo tên hoặc số điện thoại...');
+    fireEvent.change(searchInput, { target: { value: '0900000002' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument();
+      expect(screen.getByText('Foo Ltd')).toBeInTheDocument();
+    });
+  });
+
+  it('RH-131: shows empty state when search matches nothing', async () => {
+    const partnersData = [
+      { id: 'p1', phone: '0900000001', name: 'Acme Corp', address: 'HCM', type: 'PARTNER', notes: '' },
+    ];
+    mockGet
+      .mockResolvedValueOnce({ data: BRANCHES })
+      .mockResolvedValueOnce({ data: partnersData });
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Đối tác'));
+    fireEvent.click(screen.getByText('Đối tác'));
+
+    await waitFor(() => screen.getByText('Acme Corp'));
+
+    const searchInput = screen.getByPlaceholderText('Tìm theo tên hoặc số điện thoại...');
+    fireEvent.change(searchInput, { target: { value: 'xyz-no-match' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Không tìm thấy đối tác')).toBeInTheDocument();
+      expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument();
+    });
+  });
+
+  it('RH-131: selecting a partner clears the search input', async () => {
+    const partnersData = [
+      { id: 'p1', phone: '0900000001', name: 'Acme Corp', address: 'HCM', type: 'PARTNER', notes: '' },
+      { id: 'p2', phone: '0900000002', name: 'Foo Ltd', address: '', type: 'PARTNER', notes: '' },
+    ];
+    mockGet
+      .mockResolvedValueOnce({ data: BRANCHES })
+      .mockResolvedValueOnce({ data: partnersData });
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Đối tác'));
+    fireEvent.click(screen.getByText('Đối tác'));
+
+    await waitFor(() => screen.getByText('Acme Corp'));
+
+    const searchInput = screen.getByPlaceholderText('Tìm theo tên hoặc số điện thoại...');
+    fireEvent.change(searchInput, { target: { value: 'Acme' } });
+
+    // Select a partner
+    fireEvent.click(screen.getByText('Acme Corp'));
+
+    // After selection, the search input is gone (condition: !selectedCustomer)
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Tìm theo tên hoặc số điện thoại...')).not.toBeInTheDocument();
+      expect(screen.getByText('Xoá chọn')).toBeInTheDocument();
+    });
+  });
+
   it('shows customer search suggestions and allows selection', async () => {
     const customerData = [{ id: 'c1', phone: '0901111111', name: 'Khách Test', address: '', type: 'RETAIL', notes: '' }];
     mockGet

@@ -60,7 +60,15 @@ export default function NewOrderPage() {
   // partner accounts instead of searching by phone / creating on the fly.
   const [partners, setPartners] = useState<Customer[]>([]);
   const [partnersLoading, setPartnersLoading] = useState(false);
+  const [partnerQuery, setPartnerQuery] = useState('');
   const isPartnerMode = newCustomer.type === 'PARTNER';
+
+  // RH-131: filter partners by name or phone in real time
+  const filteredPartners = partners.filter((p) => {
+    if (!partnerQuery) return true;
+    const q = partnerQuery.toLowerCase();
+    return p.name.toLowerCase().includes(q) || p.phone.toLowerCase().includes(q);
+  });
 
   const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
 
@@ -97,6 +105,7 @@ export default function NewOrderPage() {
     setSelectedCustomer(c);
     setCustomerQuery(c.phone);
     setSuggestions([]);
+    setPartnerQuery('');
   }
 
   // RH-66: refetch the partner list whenever we enter PARTNER mode.
@@ -261,6 +270,7 @@ export default function NewOrderPage() {
             <h2 className="font-bold text-text-base text-[15px] mb-4">Thông tin khách hàng</h2>
 
             {/* RH-66: Partner mode — pick from existing PARTNER customers */}
+            {/* RH-131: search input + scrollable constrained list */}
             {isPartnerMode && !selectedCustomer && (
               <>
                 {partnersLoading ? (
@@ -274,19 +284,32 @@ export default function NewOrderPage() {
                     <a href="/customers" className="text-accent font-medium">Tạo đối tác mới</a>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {partners.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => selectCustomer(p)}
-                        className="w-full text-left p-4 rounded-xl border border-border-subtle bg-surface-alt text-sm transition-colors active:bg-surface"
-                      >
-                        <p className="font-semibold text-text-base">{p.name}</p>
-                        <p className="text-text-muted text-xs mt-0.5">{p.phone}{p.address ? ` · ${p.address}` : ''}</p>
-                      </button>
-                    ))}
-                  </div>
+                  <>
+                    <input
+                      type="text"
+                      value={partnerQuery}
+                      onChange={(e) => setPartnerQuery(e.target.value)}
+                      placeholder="Tìm theo tên hoặc số điện thoại..."
+                      className="w-full px-4 py-3 mb-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted"
+                    />
+                    {filteredPartners.length === 0 ? (
+                      <p className="text-center py-4 text-text-muted text-sm">Không tìm thấy đối tác</p>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {filteredPartners.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => selectCustomer(p)}
+                            className="w-full text-left p-4 rounded-xl border border-border-subtle bg-surface-alt text-sm transition-colors active:bg-surface"
+                          >
+                            <p className="font-semibold text-text-base">{p.name}</p>
+                            <p className="text-text-muted text-xs mt-0.5">{p.phone}{p.address ? ` · ${p.address}` : ''}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
