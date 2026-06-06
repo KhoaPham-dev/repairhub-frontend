@@ -72,6 +72,7 @@ const MOCK_ORDER = {
     },
   ],
   images: [],
+  source_order_history: null,
 };
 
 beforeEach(() => {
@@ -189,5 +190,55 @@ describe('OrderDetailPage', () => {
     await waitFor(() => {
       expect(screen.getByText('.000 đ')).toBeInTheDocument();
     });
+  });
+
+  it('does not render Lịch sử đơn gốc when source_order_history is null', async () => {
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, source_order_history: null } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Lịch sử trạng thái')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Lịch sử đơn gốc')).not.toBeInTheDocument();
+  });
+
+  it('does not render Lịch sử đơn gốc when source_order_history is an empty array', async () => {
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, source_order_history: [] } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Lịch sử trạng thái')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Lịch sử đơn gốc')).not.toBeInTheDocument();
+  });
+
+  it('renders Lịch sử đơn gốc section with entries when source_order_history is present', async () => {
+    const sourceHistory = [
+      {
+        id: 'sh1',
+        changed_by: 'uuid-tech-a',
+        changed_by_name: 'Tech A',
+        old_status: null,
+        new_status: 'TIEP_NHAN',
+        notes: 'Ghi chú nguồn',
+        changed_at: '2024-01-01T08:00:00Z',
+      },
+      {
+        id: 'sh2',
+        changed_by: 'uuid-tech-b',
+        changed_by_name: 'Tech B',
+        old_status: 'TIEP_NHAN',
+        new_status: 'SUA_XONG',
+        notes: null,
+        changed_at: '2024-01-02T10:00:00Z',
+      },
+    ];
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, source_order_history: sourceHistory } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Lịch sử đơn gốc')).toBeInTheDocument();
+    });
+    expect(screen.getByText('đơn gốc')).toBeInTheDocument();
+    expect(screen.getByText('Ghi chú nguồn')).toBeInTheDocument();
+    expect(screen.getByText('Tech A', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Tech B', { exact: false })).toBeInTheDocument();
   });
 });
