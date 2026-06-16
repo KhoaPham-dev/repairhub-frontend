@@ -7,7 +7,8 @@ import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import Spinner from '@/components/Spinner';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import DuplicatePhoneModal from '@/components/DuplicatePhoneModal';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
@@ -28,6 +29,8 @@ export default function CustomersPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ phone: '', name: '', address: '', type: 'RETAIL', notes: '' });
   const [error, setError] = useState('');
+  const [dupId, setDupId] = useState<string | null>(null);
+  const [dupPhone, setDupPhone] = useState('');
 
   // Debounced values used as fetch deps
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -62,6 +65,10 @@ export default function CustomersPage() {
       setShowForm(false);
       reset();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const id = (err.data as { existingCustomerId?: string } | null)?.existingCustomerId;
+        if (id) { setDupPhone(form.phone); setDupId(id); return; }
+      }
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     }
   }
@@ -168,6 +175,13 @@ export default function CustomersPage() {
           )}
         </div>
       </div>
+
+      <DuplicatePhoneModal
+        open={!!dupId}
+        phone={dupPhone}
+        onClose={() => setDupId(null)}
+        onUpdate={() => { const id = dupId; setDupId(null); router.push(`/customers/${id}`); }}
+      />
     </AuthGuard>
   );
 }

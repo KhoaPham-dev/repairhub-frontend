@@ -4,6 +4,17 @@ import { getToken } from './auth';
 // /api is appended here, not in the env var.
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -20,8 +31,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { error?: string };
-    throw new Error(body.error || `API error: ${res.status}`);
+    const body = await res.json().catch(() => ({})) as { error?: string; data?: unknown };
+    throw new ApiError(body.error || `API error: ${res.status}`, res.status, body.data);
   }
 
   if (res.status === 204) {
