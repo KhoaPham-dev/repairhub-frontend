@@ -35,14 +35,14 @@ export default function CustomerDetailPage() {
 
   function startEditing() {
     if (!customer) return;
-    setForm({ name: customer.name, phone: customer.phone, address: customer.address, notes: customer.notes });
+    setForm({ name: customer.name, phone: customer.phone, address: customer.address ?? '', notes: customer.notes ?? '' });
     setPhoneError('');
     setEditing(true);
   }
 
   function cancelEditing() {
     if (!customer) return;
-    setForm({ name: customer.name, phone: customer.phone, address: customer.address, notes: customer.notes });
+    setForm({ name: customer.name, phone: customer.phone, address: customer.address ?? '', notes: customer.notes ?? '' });
     setPhoneError('');
     setEditing(false);
   }
