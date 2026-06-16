@@ -81,7 +81,7 @@ export default function CustomerDetailPage() {
           <Card>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-semibold text-text-base text-sm">Thông tin khách hàng</h3>
-              {customer.type === 'PARTNER' && !editing && (
+              {!editing && (
                 <button
                   onClick={startEditing}
                   className="text-xs px-3 py-1.5 rounded-xl border border-border-subtle text-accent font-medium"
@@ -114,7 +114,7 @@ export default function CustomerDetailPage() {
                 </div>
                 <div>
                   <label className="text-xs text-text-muted mb-1 block">Loại</label>
-                  <p className="text-sm text-text-base">Đối tác</p>
+                  <p className="text-sm text-text-base">{customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</p>
                 </div>
                 <div>
                   <label className="text-xs text-text-muted mb-1 block">Địa chỉ</label>

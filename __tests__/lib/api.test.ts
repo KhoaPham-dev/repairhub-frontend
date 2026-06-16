@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 // Mock lib/auth so no real localStorage dependency
 jest.mock('@/lib/auth', () => ({
@@ -80,11 +80,41 @@ describe('lib/api', () => {
       expect(result).toEqual(payload);
     });
 
-    it('throws Error on non-ok response', async () => {
+    it('throws ApiError on non-ok response', async () => {
       mockGetToken.mockReturnValue(null);
       mockFetch.mockReturnValue(makeResponse({ error: 'Not found' }, 404));
 
       await expect(api.get('/missing')).rejects.toThrow('Not found');
+    });
+
+    it('throws ApiError with correct status and data', async () => {
+      mockGetToken.mockReturnValue(null);
+      mockFetch.mockReturnValue(makeResponse({ error: 'Số điện thoại đã tồn tại', data: { existingCustomerId: 'abc-123' } }, 409));
+
+      let caught: unknown;
+      try {
+        await api.get('/customers');
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught).toBeInstanceOf(ApiError);
+      const err = caught as ApiError;
+      expect(err.message).toBe('Số điện thoại đã tồn tại');
+      expect(err.status).toBe(409);
+      expect(err.data).toEqual({ existingCustomerId: 'abc-123' });
+    });
+
+    it('ApiError extends Error so instanceof Error is true', async () => {
+      mockGetToken.mockReturnValue(null);
+      mockFetch.mockReturnValue(makeResponse({ error: 'Conflict' }, 409));
+
+      let caught: unknown;
+      try {
+        await api.get('/resource');
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught instanceof Error).toBe(true);
     });
 
     it('throws generic error when response body has no error field', async () => {
