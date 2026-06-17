@@ -25,7 +25,7 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '' });
+  const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '', type: 'RETAIL' });
   const [saving, setSaving] = useState(false);
   const [phoneError, setPhoneError] = useState('');
 
@@ -35,14 +35,14 @@ export default function CustomerDetailPage() {
 
   function startEditing() {
     if (!customer) return;
-    setForm({ name: customer.name, phone: customer.phone, address: customer.address ?? '', notes: customer.notes ?? '' });
+    setForm({ name: customer.name, phone: customer.phone, address: customer.address ?? '', notes: customer.notes ?? '', type: customer.type });
     setPhoneError('');
     setEditing(true);
   }
 
   function cancelEditing() {
     if (!customer) return;
-    setForm({ name: customer.name, phone: customer.phone, address: customer.address ?? '', notes: customer.notes ?? '' });
+    setForm({ name: customer.name, phone: customer.phone, address: customer.address ?? '', notes: customer.notes ?? '', type: customer.type });
     setPhoneError('');
     setEditing(false);
   }
@@ -56,6 +56,7 @@ export default function CustomerDetailPage() {
         phone: form.phone,
         address: form.address,
         notes: form.notes,
+        type: form.type,
       });
       setCustomer((prev) => ({ ...res.data, orders: prev?.orders ?? [] }));
       setEditing(false);
@@ -114,7 +115,18 @@ export default function CustomerDetailPage() {
                 </div>
                 <div>
                   <label className="text-xs text-text-muted mb-1 block">Loại</label>
-                  <p className="text-sm text-text-base">{customer.type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</p>
+                  <div className="flex gap-2">
+                    {[['RETAIL', 'Khách lẻ'], ['PARTNER', 'Đối tác']].map(([v, l]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setForm((p) => ({ ...p, type: v }))}
+                        className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${form.type === v ? 'bg-accent text-[#0B0B0B] border-accent' : 'bg-surface text-text-muted border-border-subtle hover:text-text-base'}`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs text-text-muted mb-1 block">Địa chỉ</label>
