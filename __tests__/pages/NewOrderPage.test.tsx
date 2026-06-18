@@ -26,7 +26,7 @@ jest.mock('@/lib/api', () => ({
 }));
 
 // Mock fetch
-global.fetch = jest.fn().mockResolvedValue({ ok: true });
+global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
 
 import NewOrderPage from '@/app/orders/new/page';
 
@@ -152,9 +152,12 @@ describe('NewOrderPage', () => {
 
   it('submits single product order and navigates to /orders list', async () => {
     mockGet.mockResolvedValueOnce({ data: BRANCHES });
-    mockPost
-      .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
-      .mockResolvedValueOnce({ data: { id: 'order1' } }); // create order
+    mockPost.mockResolvedValueOnce({ data: { id: 'cust1' } }); // create customer
+
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: [{ id: 'order1' }], error: null }),
+    } as Response);
 
     render(<NewOrderPage />);
     await waitFor(() => screen.getByPlaceholderText('Số điện thoại *'));
@@ -165,6 +168,11 @@ describe('NewOrderPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Tên thiết bị *'), { target: { value: 'Loa JBL' } });
     fireEvent.change(screen.getByPlaceholderText('Mô tả lỗi *'), { target: { value: 'Hỏng loa' } });
 
+    // Attach an image so canSubmit allows submission
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const img = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [img] } });
+
     const form = document.querySelector('form')!;
     await act(async () => {
       fireEvent.submit(form);
@@ -174,13 +182,18 @@ describe('NewOrderPage', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/orders');
     });
+
+    fetchSpy.mockRestore();
   });
 
   it('submits bulk order (2 products) and navigates to /orders list', async () => {
     mockGet.mockResolvedValueOnce({ data: BRANCHES });
-    mockPost
-      .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
-      .mockResolvedValueOnce({ data: [{ id: 'ord1' }, { id: 'ord2' }] }); // bulk create
+    mockPost.mockResolvedValueOnce({ data: { id: 'cust1' } }); // create customer
+
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: [{ id: 'ord1' }, { id: 'ord2' }], error: null }),
+    } as Response);
 
     render(<NewOrderPage />);
     await waitFor(() => screen.getByText('Thêm sản phẩm'));
@@ -200,6 +213,13 @@ describe('NewOrderPage', () => {
     fireEvent.change(deviceInputs[1], { target: { value: 'Tai nghe Sony' } });
     fireEvent.change(faultInputs[1], { target: { value: 'Đứt dây' } });
 
+    // Attach images to each product so canSubmit is satisfied
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    const img1 = new File(['a'], 'img1.jpg', { type: 'image/jpeg' });
+    const img2 = new File(['b'], 'img2.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInputs[0], { target: { files: [img1] } });
+    fireEvent.change(fileInputs[1], { target: { files: [img2] } });
+
     const form = document.querySelector('form')!;
     await act(async () => {
       fireEvent.submit(form);
@@ -208,6 +228,8 @@ describe('NewOrderPage', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/orders');
     });
+
+    fetchSpy.mockRestore();
   });
 
   it('customer type button-select switches between Khách lẻ and Đối tác', async () => {
@@ -396,15 +418,13 @@ describe('NewOrderPage', () => {
     });
   });
 
-  it('RH-139: bulk order with 2 products calls fetch TWICE — once per order with that product\'s own images', async () => {
+  it('RH-142: 2-product order sends exactly ONE fetch to /api/orders/bulk-with-images with correct payload and image fields', async () => {
     mockGet.mockResolvedValueOnce({ data: BRANCHES });
-    mockPost
-      .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
-      .mockResolvedValueOnce({ data: [{ id: 'ordA' }, { id: 'ordB' }] }); // bulk create
+    mockPost.mockResolvedValueOnce({ data: { id: 'cust1' } }); // create customer
 
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({}),
+      json: async () => ({ success: true, data: [{ id: 'ordA' }, { id: 'ordB' }], error: null }),
     } as Response);
 
     render(<NewOrderPage />);
@@ -425,7 +445,7 @@ describe('NewOrderPage', () => {
     fireEvent.change(deviceInputs[1], { target: { value: 'Tai nghe Sony' } });
     fireEvent.change(faultInputs[1], { target: { value: 'Đứt dây' } });
 
-    // Attach images to each product via file inputs
+    // Attach 2 images to product A, 1 image to product B
     const fileInputs = document.querySelectorAll('input[type="file"]');
     const imgA1 = new File(['a'], 'imgA1.jpg', { type: 'image/jpeg' });
     const imgA2 = new File(['b'], 'imgA2.jpg', { type: 'image/jpeg' });
@@ -443,33 +463,39 @@ describe('NewOrderPage', () => {
       expect(mockPush).toHaveBeenCalledWith('/orders');
     });
 
-    // fetch should have been called exactly twice (once per product with images)
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // Must be exactly ONE fetch call
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-    // First call must target ordA's endpoint
-    const firstCall = fetchSpy.mock.calls[0];
-    expect(firstCall[0]).toContain('/api/orders/ordA/images');
-    const firstBody = firstCall[1]?.body as FormData;
-    expect(firstBody.getAll('images')).toHaveLength(2);
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/api/orders/bulk-with-images');
+    expect(init.method).toBe('POST');
+    // Content-Type must NOT be set manually — browser sets the multipart boundary
+    expect((init.headers as Record<string, string>)?.['Content-Type']).toBeUndefined();
 
-    // Second call must target ordB's endpoint
-    const secondCall = fetchSpy.mock.calls[1];
-    expect(secondCall[0]).toContain('/api/orders/ordB/images');
-    const secondBody = secondCall[1]?.body as FormData;
-    expect(secondBody.getAll('images')).toHaveLength(1);
+    const sentFd = init.body as FormData;
+
+    // payload JSON is correct
+    const payload = JSON.parse(sentFd.get('payload') as string);
+    expect(payload.customer_id).toBe('cust1');
+    expect(payload.branch_id).toBe('b1');
+    expect(payload.products).toHaveLength(2);
+    expect(payload.products[0].device_name).toBe('Loa JBL');
+    expect(payload.products[1].device_name).toBe('Tai nghe Sony');
+
+    // images_0 has 2 files (product A), images_1 has 1 file (product B)
+    expect(sentFd.getAll('images_0')).toHaveLength(2);
+    expect(sentFd.getAll('images_1')).toHaveLength(1);
 
     fetchSpy.mockRestore();
   });
 
-  it('RH-139: failed image upload fetch (ok: false) shows error and blocks navigation', async () => {
+  it('RH-142: when /api/orders/bulk-with-images returns ok:false, error is shown and navigation is blocked', async () => {
     mockGet.mockResolvedValueOnce({ data: BRANCHES });
-    mockPost
-      .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
-      .mockResolvedValueOnce({ data: { id: 'order1' } }); // create single order
+    mockPost.mockResolvedValueOnce({ data: { id: 'cust1' } }); // create customer
 
     const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
-      json: async () => ({ error: 'Không có ảnh nào được tải lên' }),
+      json: async () => ({ error: 'Tạo đơn thất bại do lỗi DB' }),
     } as Response);
 
     render(<NewOrderPage />);
@@ -481,7 +507,7 @@ describe('NewOrderPage', () => {
     fireEvent.change(screen.getByPlaceholderText('Tên thiết bị *'), { target: { value: 'Loa JBL' } });
     fireEvent.change(screen.getByPlaceholderText('Mô tả lỗi *'), { target: { value: 'Hỏng loa' } });
 
-    // Attach an image so the upload fetch is triggered
+    // Attach an image
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     const img = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
     fireEvent.change(fileInput, { target: { files: [img] } });
@@ -492,7 +518,7 @@ describe('NewOrderPage', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Không có ảnh nào được tải lên')).toBeInTheDocument();
+      expect(screen.getByText('Tạo đơn thất bại do lỗi DB')).toBeInTheDocument();
     });
 
     // Navigation must NOT have been triggered
