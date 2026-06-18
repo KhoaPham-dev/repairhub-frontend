@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
+// jsdom does not implement URL.createObjectURL; mock it so ImageThumb renders without crashing
+global.URL.createObjectURL = jest.fn(() => 'blob:test');
+global.URL.revokeObjectURL = jest.fn();
+
 // Mock next/navigation
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -381,7 +385,119 @@ describe('NewOrderPage', () => {
       const fileInput = document.querySelector('input[type="file"]');
       expect(fileInput).not.toHaveAttribute('capture');
       expect(fileInput).toHaveAttribute('multiple');
-      expect(fileInput).toHaveAttribute('accept', 'image/*');
     });
+  });
+
+  it('RH-139: file input accepts HEIC/HEIF explicitly (not image/*)', async () => {
+    render(<NewOrderPage />);
+    await waitFor(() => {
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,image/heic,image/heif');
+    });
+  });
+
+  it('RH-139: bulk order with 2 products calls fetch TWICE — once per order with that product\'s own images', async () => {
+    mockGet.mockResolvedValueOnce({ data: BRANCHES });
+    mockPost
+      .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
+      .mockResolvedValueOnce({ data: [{ id: 'ordA' }, { id: 'ordB' }] }); // bulk create
+
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response);
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Thêm sản phẩm'));
+
+    fireEvent.click(screen.getByText('Chi nhánh 1'));
+    fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
+    fireEvent.change(screen.getByPlaceholderText('Tên khách hàng *'), { target: { value: 'Nguyễn Văn A' } });
+
+    fireEvent.click(screen.getByText('Thêm sản phẩm'));
+    await waitFor(() => screen.getByText('Sản phẩm 2'));
+
+    const deviceInputs = screen.getAllByPlaceholderText('Tên thiết bị *');
+    const faultInputs = screen.getAllByPlaceholderText('Mô tả lỗi *');
+
+    fireEvent.change(deviceInputs[0], { target: { value: 'Loa JBL' } });
+    fireEvent.change(faultInputs[0], { target: { value: 'Hỏng loa' } });
+    fireEvent.change(deviceInputs[1], { target: { value: 'Tai nghe Sony' } });
+    fireEvent.change(faultInputs[1], { target: { value: 'Đứt dây' } });
+
+    // Attach images to each product via file inputs
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    const imgA1 = new File(['a'], 'imgA1.jpg', { type: 'image/jpeg' });
+    const imgA2 = new File(['b'], 'imgA2.jpg', { type: 'image/jpeg' });
+    const imgB1 = new File(['c'], 'imgB1.jpg', { type: 'image/jpeg' });
+
+    fireEvent.change(fileInputs[0], { target: { files: [imgA1, imgA2] } });
+    fireEvent.change(fileInputs[1], { target: { files: [imgB1] } });
+
+    const form = document.querySelector('form')!;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/orders');
+    });
+
+    // fetch should have been called exactly twice (once per product with images)
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    // First call must target ordA's endpoint
+    const firstCall = fetchSpy.mock.calls[0];
+    expect(firstCall[0]).toContain('/api/orders/ordA/images');
+    const firstBody = firstCall[1]?.body as FormData;
+    expect(firstBody.getAll('images')).toHaveLength(2);
+
+    // Second call must target ordB's endpoint
+    const secondCall = fetchSpy.mock.calls[1];
+    expect(secondCall[0]).toContain('/api/orders/ordB/images');
+    const secondBody = secondCall[1]?.body as FormData;
+    expect(secondBody.getAll('images')).toHaveLength(1);
+
+    fetchSpy.mockRestore();
+  });
+
+  it('RH-139: failed image upload fetch (ok: false) shows error and blocks navigation', async () => {
+    mockGet.mockResolvedValueOnce({ data: BRANCHES });
+    mockPost
+      .mockResolvedValueOnce({ data: { id: 'cust1' } }) // create customer
+      .mockResolvedValueOnce({ data: { id: 'order1' } }); // create single order
+
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Không có ảnh nào được tải lên' }),
+    } as Response);
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByPlaceholderText('Số điện thoại *'));
+
+    fireEvent.click(screen.getByText('Chi nhánh 1'));
+    fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
+    fireEvent.change(screen.getByPlaceholderText('Tên khách hàng *'), { target: { value: 'Nguyễn Văn A' } });
+    fireEvent.change(screen.getByPlaceholderText('Tên thiết bị *'), { target: { value: 'Loa JBL' } });
+    fireEvent.change(screen.getByPlaceholderText('Mô tả lỗi *'), { target: { value: 'Hỏng loa' } });
+
+    // Attach an image so the upload fetch is triggered
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const img = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [img] } });
+
+    const form = document.querySelector('form')!;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Không có ảnh nào được tải lên')).toBeInTheDocument();
+    });
+
+    // Navigation must NOT have been triggered
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
   });
 });

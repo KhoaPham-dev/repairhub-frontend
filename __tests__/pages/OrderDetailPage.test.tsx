@@ -1,5 +1,9 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+
+// jsdom does not implement URL.createObjectURL; mock it so ImageThumb renders without crashing
+global.URL.createObjectURL = jest.fn(() => 'blob:test');
+global.URL.revokeObjectURL = jest.fn();
 
 // Mock next/navigation
 const mockBack = jest.fn();
@@ -14,12 +18,17 @@ jest.mock('@/lib/auth', () => ({ getToken: () => 'test-token' }));
 // Mock api
 const mockGet = jest.fn();
 const mockPut = jest.fn();
+const mockPatch = jest.fn();
 jest.mock('@/lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockGet(...args),
     put: (...args: unknown[]) => mockPut(...args),
+    patch: (...args: unknown[]) => mockPatch(...args),
   },
 }));
+
+// Mock fetch (default: ok)
+global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
 
 // Mock AuthGuard
 jest.mock('@/components/AuthGuard', () => ({
@@ -78,6 +87,9 @@ const MOCK_ORDER = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockGet.mockResolvedValue({ data: MOCK_ORDER });
+  mockPatch.mockResolvedValue({});
+  mockPut.mockResolvedValue({});
+  (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) });
 });
 
 describe('OrderDetailPage', () => {
@@ -240,5 +252,40 @@ describe('OrderDetailPage', () => {
     expect(screen.getByText('Ghi chú nguồn')).toBeInTheDocument();
     expect(screen.getByText('Tech A', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('Tech B', { exact: false })).toBeInTheDocument();
+  });
+
+  it('RH-139: file input accepts HEIC/HEIF explicitly (not image/*)', async () => {
+    render(<OrderDetailPage />);
+    await waitFor(() => screen.getByText('Lưu thay đổi'));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,image/heic,image/heif');
+  });
+
+  it('RH-139: failed image upload (ok: false) on update shows error and does not show success toast', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Tải ảnh thất bại' }),
+    });
+
+    render(<OrderDetailPage />);
+    await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+    // Attach an image to trigger the upload branch
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [img] } });
+
+    // Now submit
+    const saveBtn = screen.getByText('Lưu thay đổi');
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Tải ảnh thất bại')).toBeInTheDocument();
+    });
+
+    // Success toast must NOT appear
+    expect(screen.queryByText('Cập nhật thành công')).not.toBeInTheDocument();
   });
 });
