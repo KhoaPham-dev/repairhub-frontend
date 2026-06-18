@@ -146,11 +146,15 @@ export default function OrderDetailPage() {
         newImages.forEach((f) => fd.append('images', f));
         fd.append('image_type', 'COMPLETION');
         const token = localStorage.getItem('token');
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061'}/api/orders/${id}/images`, {
+        const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061'}/api/orders/${id}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
         });
+        if (!r.ok) {
+          const b = await r.json().catch(() => ({}));
+          throw new Error((b as { error?: string })?.error || 'Tải ảnh thất bại');
+        }
       }
 
       setNewStatus(''); setNotes(''); setNewImages([]);
@@ -318,7 +322,7 @@ export default function OrderDetailPage() {
                   <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                   {/* No `capture` attr — that would force camera-only on mobile.
                       Without it, the OS picker offers Take Photo + Photo Library. */}
-                  <input type="file" accept="image/*" multiple
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
                     onChange={(e) => {
                       // RH-64: capture files synchronously BEFORE the value
                       // reset — otherwise React's lazy state-updater reads

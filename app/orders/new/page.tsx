@@ -199,7 +199,7 @@ export default function NewOrderPage() {
         fault_description: p.fault_description,
       }));
 
-      let firstOrderId: string;
+      let orderIds: string[];
 
       if (productList.length === 1) {
         const or = await api.post<ApiResponse<{ id: string }>>('/orders', {
@@ -207,28 +207,34 @@ export default function NewOrderPage() {
           branch_id: branchId,
           ...productList[0],
         });
-        firstOrderId = or.data.id;
+        orderIds = [or.data.id];
       } else {
         const bulkRes = await api.post<ApiResponse<Array<{ id: string }>>>('/orders/bulk', {
           customer_id: customerId,
           branch_id: branchId,
           products: productList,
         });
-        firstOrderId = bulkRes.data[0].id;
+        orderIds = bulkRes.data.map((o) => o.id);
       }
 
-      // Upload images for each product
-      const allImages = products.flatMap((p) => p.images);
-      if (allImages.length > 0) {
+      // Upload each product's images to its own order
+      const token = localStorage.getItem('token');
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
+      for (let i = 0; i < products.length; i++) {
+        const imgs = products[i].images;
+        if (imgs.length === 0) continue;
         const fd = new FormData();
-        allImages.forEach((img) => fd.append('images', img));
+        imgs.forEach((img) => fd.append('images', img));
         fd.append('image_type', 'INTAKE');
-        const token = localStorage.getItem('token');
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061'}/api/orders/${firstOrderId}/images`, {
+        const r = await fetch(`${API_BASE}/api/orders/${orderIds[i]}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
         });
+        if (!r.ok) {
+          const b = await r.json().catch(() => ({}));
+          throw new Error((b as { error?: string })?.error || 'Tải ảnh thất bại');
+        }
       }
 
       router.push('/orders');
@@ -424,7 +430,7 @@ export default function NewOrderPage() {
                       <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                       {/* No `capture` attr — that would force camera-only on mobile.
                           Without it, the OS picker offers Take Photo + Photo Library. */}
-                      <input type="file" accept="image/*" multiple
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
                         onChange={(e) => {
                           const newFiles = Array.from(e.target.files ?? []);
                           updateProduct(idx, 'images', [...product.images, ...newFiles]);
