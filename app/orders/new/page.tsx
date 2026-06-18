@@ -199,43 +199,20 @@ export default function NewOrderPage() {
         fault_description: p.fault_description,
       }));
 
-      let orderIds: string[];
+      const fd = new FormData();
+      fd.append('payload', JSON.stringify({ customer_id: customerId, branch_id: branchId, products: productList }));
+      products.forEach((p, i) => {
+        p.images.forEach((img) => fd.append(`images_${i}`, img));
+      });
 
-      if (productList.length === 1) {
-        const or = await api.post<ApiResponse<{ id: string }>>('/orders', {
-          customer_id: customerId,
-          branch_id: branchId,
-          ...productList[0],
-        });
-        orderIds = [or.data.id];
-      } else {
-        const bulkRes = await api.post<ApiResponse<Array<{ id: string }>>>('/orders/bulk', {
-          customer_id: customerId,
-          branch_id: branchId,
-          products: productList,
-        });
-        orderIds = bulkRes.data.map((o) => o.id);
-      }
-
-      // Upload each product's images to its own order
       const token = localStorage.getItem('token');
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6061';
-      for (let i = 0; i < products.length; i++) {
-        const imgs = products[i].images;
-        if (imgs.length === 0) continue;
-        const fd = new FormData();
-        imgs.forEach((img) => fd.append('images', img));
-        fd.append('image_type', 'INTAKE');
-        const r = await fetch(`${API_BASE}/api/orders/${orderIds[i]}/images`, {
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: fd,
-        });
-        if (!r.ok) {
-          const b = await r.json().catch(() => ({}));
-          throw new Error((b as { error?: string })?.error || 'Tải ảnh thất bại');
-        }
-      }
+      const r = await fetch(`${API_BASE}/api/orders/bulk-with-images`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error((b as { error?: string })?.error || 'Tạo đơn thất bại'); }
 
       router.push('/orders');
     } catch (err) {
