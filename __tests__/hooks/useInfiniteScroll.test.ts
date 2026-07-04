@@ -174,4 +174,195 @@ describe('useInfiniteScroll', () => {
     // fetchPage should only have been called once (the double-fire was suppressed)
     expect(fetchPage).toHaveBeenCalledTimes(1);
   });
+
+  it('returns loadedPages = 1 after initial single-page load', async () => {
+    const fetchPage = jest.fn().mockResolvedValue([{ id: 1 }]);
+    const { result } = renderHook(() => useInfiniteScroll({ fetchPage, pageSize: 20 }));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.loadedPages).toBe(1);
+  });
+
+  it('returns loadedPages incremented after sentinel loads the next page', async () => {
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    const page1 = Array.from({ length: 20 }, (_, i) => ({ id: 20 + i }));
+    const fetchPage = jest.fn()
+      .mockResolvedValueOnce(page0)
+      .mockResolvedValueOnce(page1);
+
+    const { result } = renderHook(() => useInfiniteScroll({ fetchPage, pageSize: 20 }));
+
+    const sentinel = document.createElement('div');
+    act(() => { result.current.sentinelRef(sentinel); });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.loadedPages).toBe(1);
+
+    act(() => { observerInstance?.triggerIntersection(true); });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.loadedPages).toBe(2);
+  });
+
+  // -------------------------------------------------------------------------
+  // initialPageCount tests
+  // -------------------------------------------------------------------------
+
+  it('fetches all initialPageCount pages on mount and accumulates items', async () => {
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    const page1 = Array.from({ length: 20 }, (_, i) => ({ id: 20 + i }));
+    const page2 = Array.from({ length: 20 }, (_, i) => ({ id: 40 + i }));
+    const fetchPage = jest.fn()
+      .mockResolvedValueOnce(page0)
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2);
+
+    const { result } = renderHook(() =>
+      useInfiniteScroll({ fetchPage, pageSize: 20, initialPageCount: 3 }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(fetchPage).toHaveBeenCalledTimes(3);
+    expect(fetchPage).toHaveBeenNthCalledWith(1, 0);
+    expect(fetchPage).toHaveBeenNthCalledWith(2, 1);
+    expect(fetchPage).toHaveBeenNthCalledWith(3, 2);
+    expect(result.current.items).toHaveLength(60);
+    expect(result.current.loadedPages).toBe(3);
+    expect(result.current.hasMore).toBe(true);
+  });
+
+  it('sentinel loads the page after a multi-page restore (page index = initialPageCount)', async () => {
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    const page1 = Array.from({ length: 20 }, (_, i) => ({ id: 20 + i }));
+    const page2 = Array.from({ length: 20 }, (_, i) => ({ id: 40 + i }));
+    const page3 = Array.from({ length: 5 }, (_, i) => ({ id: 60 + i }));
+    const fetchPage = jest.fn()
+      .mockResolvedValueOnce(page0)
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2)
+      .mockResolvedValueOnce(page3);
+
+    const { result } = renderHook(() =>
+      useInfiniteScroll({ fetchPage, pageSize: 20, initialPageCount: 3 }),
+    );
+
+    const sentinel = document.createElement('div');
+    act(() => { result.current.sentinelRef(sentinel); });
+
+    // Wait for all 3 restore pages to load
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.items).toHaveLength(60);
+    expect(result.current.loadedPages).toBe(3);
+
+    // Sentinel fires — should request page index 3 (the 4th page)
+    act(() => { observerInstance?.triggerIntersection(true); });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(fetchPage).toHaveBeenCalledTimes(4);
+    expect(fetchPage).toHaveBeenNthCalledWith(4, 3);
+    expect(result.current.items).toHaveLength(65);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.loadedPages).toBe(4);
+  });
+
+  it('stops early and sets hasMore=false when a page in the restore batch is short', async () => {
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    // page1 is short — end of list reached before filling 3 pages
+    const page1 = Array.from({ length: 7 }, (_, i) => ({ id: 20 + i }));
+    const fetchPage = jest.fn()
+      .mockResolvedValueOnce(page0)
+      .mockResolvedValueOnce(page1);
+
+    const { result } = renderHook(() =>
+      useInfiniteScroll({ fetchPage, pageSize: 20, initialPageCount: 3 }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Only fetched up to the short page; page 2 was never requested
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+    expect(result.current.items).toHaveLength(27);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.loadedPages).toBe(2);
+  });
+
+  // -------------------------------------------------------------------------
+  // Regression — initialPageCount must be first-run-only (filter change → 1 fetch)
+  // -------------------------------------------------------------------------
+
+  it('after a multi-page restore, swapping fetchPage (filter change) triggers only ONE fetch', async () => {
+    // First mount: restore 3 pages.
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    const page1 = Array.from({ length: 20 }, (_, i) => ({ id: 20 + i }));
+    const page2 = Array.from({ length: 20 }, (_, i) => ({ id: 40 + i }));
+    const fetchPage1 = jest.fn()
+      .mockResolvedValueOnce(page0)
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2);
+
+    const filtered = [{ id: 100 }];
+    const fetchPage2 = jest.fn().mockResolvedValue(filtered);
+
+    const { result, rerender } = renderHook(
+      ({ fn }: { fn: (page: number) => Promise<{ id: number }[]> }) =>
+        useInfiniteScroll({ fetchPage: fn, pageSize: 20, initialPageCount: 3 }),
+      { initialProps: { fn: fetchPage1 } },
+    );
+
+    // Wait for the full 3-page restore to complete.
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(fetchPage1).toHaveBeenCalledTimes(3);
+    expect(result.current.items).toHaveLength(60);
+
+    // Simulate a filter change: swap to a new fetchPage reference.
+    rerender({ fn: fetchPage2 });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Must fetch only 1 page (page 0), NOT 3 pages, on the filter-change reload.
+    expect(fetchPage2).toHaveBeenCalledTimes(1);
+    expect(fetchPage2).toHaveBeenCalledWith(0);
+    expect(result.current.items).toEqual(filtered);
+  });
+
+  // -------------------------------------------------------------------------
+  // Regression — cancellation on unmount (no setState after unmount)
+  // -------------------------------------------------------------------------
+
+  it('resolving a deferred fetchPage after unmount does not update items (cancelled guard)', async () => {
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+
+    // Page 1 is deferred so we can control when it resolves.
+    let resolvePage1!: (v: { id: number }[]) => void;
+    const deferredPage1 = new Promise<{ id: number }[]>((resolve) => {
+      resolvePage1 = resolve;
+    });
+
+    const fetchPage = jest.fn()
+      .mockResolvedValueOnce(page0)   // page 0: resolves immediately
+      .mockReturnValueOnce(deferredPage1) // page 1: deferred
+      .mockResolvedValue([]);          // page 2+: never reached
+
+    const { unmount } = renderHook(() =>
+      useInfiniteScroll({ fetchPage, pageSize: 20, initialPageCount: 3 }),
+    );
+
+    // Wait until page 0 has resolved and page 1 is in-flight.
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
+
+    // Unmount while page 1 is still pending.
+    unmount();
+
+    // Resolve page 1 after the component is gone.
+    act(() => { resolvePage1([{ id: 100 }, { id: 101 }]); });
+
+    // Allow all microtasks to settle.
+    await act(async () => {});
+
+    // The cancelled flag must have prevented page 2 from being requested
+    // (the loop returns early after the `if (cancelled) return` check).
+    // fetchPage should have been called exactly twice: page 0 and page 1.
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+  });
 });
