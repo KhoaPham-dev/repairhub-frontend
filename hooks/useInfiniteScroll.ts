@@ -5,6 +5,12 @@ export interface UseInfiniteScrollOptions<T> {
   fetchPage: (page: number) => Promise<T[]>;
   /** How many items constitute a "full" page — used to detect end of list. */
   pageSize: number;
+  /**
+   * How many pages to load on the initial mount.
+   * Defaults to 1 (normal behaviour). Pass a value > 1 to refetch multiple pages
+   * on mount (e.g. when restoring a previous scroll position).
+   */
+  initialPageCount?: number;
 }
 
 export interface UseInfiniteScrollResult<T> {
@@ -15,9 +21,15 @@ export interface UseInfiniteScrollResult<T> {
   sentinelRef: React.RefCallback<Element>;
   /** Reset and reload from page 0 (e.g., after a filter change). */
   reset: () => void;
+  /** Current highest loaded page index + 1 (i.e. the total number of loaded pages). */
+  loadedPages: number;
 }
 
-export function useInfiniteScroll<T>({ fetchPage, pageSize }: UseInfiniteScrollOptions<T>): UseInfiniteScrollResult<T> {
+export function useInfiniteScroll<T>({
+  fetchPage,
+  pageSize,
+  initialPageCount = 1,
+}: UseInfiniteScrollOptions<T>): UseInfiniteScrollResult<T> {
   const [items, setItems] = useState<T[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -56,8 +68,59 @@ export function useInfiniteScroll<T>({ fetchPage, pageSize }: UseInfiniteScrollO
     setPage(0);
     hasMoreRef.current = true;
     setHasMore(true);
-    load(0, false);
-  }, [fetchPage, load]);
+
+    const count = initialPageCount;
+
+    if (count <= 1) {
+      // Standard single-page initial load — unchanged behaviour.
+      load(0, false);
+      return;
+    }
+
+    // Multi-page restore fetch.
+    // Bypass the guarded `load` helper so sequential pages don't trip each other's
+    // in-flight guard; manage loadingRef manually instead.
+    let cancelled = false;
+
+    (async () => {
+      loadingRef.current = true;
+      setLoading(true);
+      try {
+        let allItems: T[] = [];
+        let lastPage = 0;
+        let more = true;
+
+        for (let p = 0; p < count; p++) {
+          if (cancelled) return;
+          const pageItems = await fetchPage(p);
+          allItems = [...allItems, ...pageItems];
+          lastPage = p;
+
+          if (pageItems.length < pageSize) {
+            // End of list reached before filling all requested pages.
+            more = false;
+            break;
+          }
+        }
+
+        if (!cancelled) {
+          setItems(allItems);
+          setPage(lastPage);
+          hasMoreRef.current = more;
+          setHasMore(more);
+        }
+      } finally {
+        if (!cancelled) {
+          loadingRef.current = false;
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchPage, load, initialPageCount]);
 
   // IntersectionObserver wired to the sentinel element.
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -98,5 +161,5 @@ export function useInfiniteScroll<T>({ fetchPage, pageSize }: UseInfiniteScrollO
     load(0, false);
   }, [load]);
 
-  return { items, loading, hasMore, sentinelRef, reset };
+  return { items, loading, hasMore, sentinelRef, reset, loadedPages: page + 1 };
 }

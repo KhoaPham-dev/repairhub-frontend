@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, ChevronRight, ArrowDownNarrowWide, ArrowUpNarrowWide, Loader2 } from 'lucide-react';
 import AuthGuard from '@/components/AuthGuard';
@@ -52,6 +52,11 @@ const FILTERS = [
 
 const LIMIT = 20;
 
+interface ScrollSnapshot {
+  scrollTop: number;
+  pages: number;
+}
+
 function OrdersPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +89,33 @@ function OrdersPageInner() {
     router.replace('/orders' + (qs ? '?' + qs : ''));
   }, [debouncedSearch, debouncedStatus, debouncedSort, router]);
 
+  // ---------------------------------------------------------------------------
+  // Scroll-position restore
+  // ---------------------------------------------------------------------------
+
+  // The sessionStorage key is scoped to the current URL query string so that
+  // a snapshot from one filter set does not bleed into another.
+  const snapshotKey = `orders-scroll:${searchParams.toString()}`;
+
+  // Read the snapshot from sessionStorage once at mount.
+  // The lazy useState initializer runs synchronously on the client (only once),
+  // and the typeof-window guard prevents it from running during SSR.
+  const pendingRestoreRef = useRef<ScrollSnapshot | null>(null);
+  const restoreAppliedRef = useRef(false);
+
+  const [initialPageCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    try {
+      const raw = sessionStorage.getItem(snapshotKey);
+      if (!raw) return 1;
+      const snap = JSON.parse(raw) as ScrollSnapshot;
+      pendingRestoreRef.current = snap;
+      return Math.max(1, snap.pages ?? 1);
+    } catch {
+      return 1;
+    }
+  });
+
   const fetchPage = useCallback(async (page: number): Promise<Order[]> => {
     const params = new URLSearchParams({
       limit: String(LIMIT),
@@ -100,10 +132,32 @@ function OrdersPageInner() {
     return r?.data ?? [];
   }, [debouncedSearch, debouncedStatus, debouncedSort]);
 
-  const { items: orders, loading, hasMore, sentinelRef } = useInfiniteScroll<Order>({
+  const { items: orders, loading, hasMore, sentinelRef, loadedPages } = useInfiniteScroll<Order>({
     fetchPage,
     pageSize: LIMIT,
+    initialPageCount,
   });
+
+  // Restore scrollTop once all requested pages have loaded and loading is done.
+  // useLayoutEffect fires synchronously after DOM mutations — minimises flash.
+  useLayoutEffect(() => {
+    if (restoreAppliedRef.current) return;
+    if (loading) return;
+    if (!pendingRestoreRef.current) return;
+    if (orders.length === 0) return;
+
+    const el = document.querySelector('main');
+    if (el) {
+      el.scrollTop = pendingRestoreRef.current.scrollTop;
+    }
+    restoreAppliedRef.current = true;
+    pendingRestoreRef.current = null;
+    try {
+      sessionStorage.removeItem(snapshotKey);
+    } catch {
+      // sessionStorage may be unavailable (private browsing, quota, etc.)
+    }
+  }, [loading, orders.length, snapshotKey]);
 
   // Relative time: "Vừa xong" < 60s; "X giờ trước" < 24h; "X ngày trước" otherwise.
   function relativeTime(iso: string): string {
@@ -180,7 +234,19 @@ function OrdersPageInner() {
           {orders.map((order) => (
             <div
               key={order.id}
-              onClick={() => router.push(`/orders/${order.id}`)}
+              onClick={() => {
+                // Snapshot scroll position and loaded page count before navigating.
+                try {
+                  const el = document.querySelector('main');
+                  sessionStorage.setItem(
+                    snapshotKey,
+                    JSON.stringify({ scrollTop: el?.scrollTop ?? 0, pages: loadedPages }),
+                  );
+                } catch {
+                  // sessionStorage may be unavailable (private browsing, quota, etc.)
+                }
+                router.push(`/orders/${order.id}`);
+              }}
               className={`bg-surface rounded-2xl p-4 active:bg-surface-alt cursor-pointer transition-colors ${
                 order.priority === 'HIGH'
                   ? 'border-2 border-red-500'

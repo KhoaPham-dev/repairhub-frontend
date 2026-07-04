@@ -94,6 +94,8 @@ beforeEach(() => {
   mockSearchParams.delete('search');
   mockSearchParams.delete('status');
   mockSearchParams.delete('sort');
+  // Ensure sessionStorage is clean so scroll-restore logic doesn't leak between tests
+  sessionStorage.clear();
 });
 
 describe('OrdersPage', () => {
@@ -223,5 +225,86 @@ describe('OrdersPage', () => {
     await waitFor(() => screen.getByText('Lê Văn C · 0923456789'));
     const mediumCard = screen.getByText('RH-003').closest('[class*="rounded-2xl"]');
     expect(mediumCard).toHaveClass('border-yellow-400');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Scroll restore tests
+  // ---------------------------------------------------------------------------
+
+  it('tapping an order card saves scrollTop and loadedPages to sessionStorage', async () => {
+    // Provide a fake <main> element so document.querySelector('main') returns it.
+    const mainEl = document.createElement('main');
+    let mainScrollTop = 250;
+    Object.defineProperty(mainEl, 'scrollTop', {
+      get: () => mainScrollTop,
+      set: (v: number) => { mainScrollTop = v; },
+      configurable: true,
+    });
+    document.body.appendChild(mainEl);
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+
+    render(<OrdersPage />);
+    await waitFor(() => screen.getByText('Nguyễn Văn A · 0901234567'));
+
+    const orderCard = screen.getByText('RH-001').closest('[class*="rounded-2xl"]');
+    if (orderCard) fireEvent.click(orderCard);
+
+    // The snapshot key for empty search params is 'orders-scroll:'
+    // MOCK_ORDERS (3 items < pageSize 20) means loadedPages = 1 after the initial load.
+    expect(setItemSpy).toHaveBeenCalledWith(
+      'orders-scroll:',
+      JSON.stringify({ scrollTop: 250, pages: 1 }),
+    );
+
+    document.body.removeChild(mainEl);
+    setItemSpy.mockRestore();
+  });
+
+  it('mounting with a sessionStorage snapshot requests N pages and restores scrollTop', async () => {
+    const snapshotKey = 'orders-scroll:';
+    const snapshot = { scrollTop: 320, pages: 2 };
+    sessionStorage.setItem(snapshotKey, JSON.stringify(snapshot));
+
+    // Provide two full pages (20 items each) so the hook fetches both.
+    const makePage = (offset: number) =>
+      Array.from({ length: 20 }, (_, i) => ({
+        id: `order-p${offset}-${i}`,
+        order_code: `RH-P${offset}-${i}`,
+        customer_name: `Customer ${offset * 20 + i}`,
+        customer_phone: '0901234567',
+        device_name: 'Device',
+        status: 'TIEP_NHAN',
+        priority: null,
+        created_at: '2024-01-01T00:00:00Z',
+        branch_name: 'Branch 1',
+      }));
+
+    mockGet
+      .mockResolvedValueOnce({ data: makePage(0) })
+      .mockResolvedValueOnce({ data: makePage(1) });
+
+    // Provide a <main> element with a trackable scrollTop.
+    const mainEl = document.createElement('main');
+    let capturedScrollTop = 0;
+    Object.defineProperty(mainEl, 'scrollTop', {
+      get: () => capturedScrollTop,
+      set: (v: number) => { capturedScrollTop = v; },
+      configurable: true,
+    });
+    document.body.appendChild(mainEl);
+
+    render(<OrdersPage />);
+
+    // Both pages should be fetched (2 API calls).
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+
+    // After both pages load, the restore effect sets scrollTop.
+    await waitFor(() => expect(capturedScrollTop).toBe(320));
+
+    // Snapshot should be removed from sessionStorage after restore.
+    expect(sessionStorage.getItem(snapshotKey)).toBeNull();
+
+    document.body.removeChild(mainEl);
   });
 });
