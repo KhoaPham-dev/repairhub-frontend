@@ -57,6 +57,48 @@ interface ScrollSnapshot {
   pages: number;
 }
 
+// Module-scoped restore intent. On a back-navigation the orders page does NOT
+// mount once — framer-motion's <AnimatePresence mode="wait"> (in the layout's
+// PageTransition) remounts it ~200ms later, so there are multiple short-lived
+// instances. If each instance read+cleared sessionStorage, the FIRST one would
+// consume the snapshot and die, leaving the surviving instance with nothing to
+// restore. Promoting the snapshot to module scope lets every instance in the
+// remount burst restore from the same intent. sessionStorage is still cleared on
+// first read so a later *fresh* visit to the same URL won't wrongly restore.
+interface RestoreIntent { key: string; scrollTop: number; pages: number; expiresAt: number }
+let restoreIntent: RestoreIntent | null = null;
+// Long enough to cover the remount burst plus a slow multi-page refetch on the
+// surviving instance, short enough that an unrelated later visit won't collide.
+const RESTORE_TTL_MS = 3000;
+
+function takeRestoreIntent(key: string): RestoreIntent | null {
+  const now = Date.now();
+  // A fresh sessionStorage snapshot (just written on a card tap) always wins over
+  // any lingering module intent, so rapid tap→back→tap→back restores the latest.
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const snap = JSON.parse(raw) as ScrollSnapshot;
+        // One-shot: consume immediately so a fresh (non-back) visit won't restore.
+        sessionStorage.removeItem(key);
+        // Clamp pages (reject Infinity/NaN/negative; cap at 50) to bound refetches
+        // against a tampered value; validate scrollTop.
+        const pages = Number.isFinite(snap.pages) && snap.pages > 0 ? Math.min(50, Math.floor(snap.pages)) : 1;
+        const scrollTop = Number.isFinite(snap.scrollTop) && snap.scrollTop > 0 ? snap.scrollTop : 0;
+        restoreIntent = { key, scrollTop, pages, expiresAt: now + RESTORE_TTL_MS };
+        return restoreIntent;
+      }
+    } catch {
+      /* ignore malformed snapshot */
+    }
+  }
+  // sessionStorage already consumed (remount burst) — fall back to module intent.
+  if (restoreIntent && restoreIntent.expiresAt <= now) restoreIntent = null;
+  if (restoreIntent && restoreIntent.key === key) return restoreIntent;
+  return null;
+}
+
 function OrdersPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -79,14 +121,23 @@ function OrdersPageInner() {
   useEffect(() => { setDebouncedStatus(status); }, [status]);
   useEffect(() => { setDebouncedSort(sortDir); }, [sortDir]);
 
-  // Sync filter state to URL (throttled via debounced values)
+  // Sync filter state to URL (throttled via debounced values).
+  // Skip the initial run: on mount the filter state is initialised FROM the URL,
+  // so re-writing the same URL is redundant AND triggers a router navigation that
+  // remounts this page — which would discard the multi-page scroll restore below.
+  const didSyncMountRef = useRef(false);
   useEffect(() => {
+    if (!didSyncMountRef.current) {
+      didSyncMountRef.current = true;
+      return;
+    }
     const params = new URLSearchParams();
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (debouncedStatus) params.set('status', debouncedStatus);
     if (debouncedSort !== 'asc') params.set('sort', debouncedSort);
     const qs = params.toString();
-    router.replace('/orders' + (qs ? '?' + qs : ''));
+    // scroll:false — syncing filter state to the URL must not reset scroll.
+    router.replace('/orders' + (qs ? '?' + qs : ''), { scroll: false });
   }, [debouncedSearch, debouncedStatus, debouncedSort, router]);
 
   // ---------------------------------------------------------------------------
@@ -97,41 +148,26 @@ function OrdersPageInner() {
   // a snapshot from one filter set does not bleed into another.
   const snapshotKey = `orders-scroll:${searchParams.toString()}`;
 
-  // Read the snapshot from sessionStorage once at mount.
-  // Using a ref guard (didReadRef) instead of a useState lazy initialiser avoids
-  // the impure-initialiser problem: lazy initialisers are double-invoked under
-  // React Strict Mode, which would mutate pendingRestoreRef twice.
-  // The didReadRef guard makes the read one-shot on the client.
-  const didReadRef = useRef(false);
-  const pendingRestoreRef = useRef<ScrollSnapshot | null>(null);
+  // Take the restore intent once per instance (ref-guarded so React Strict Mode's
+  // double render doesn't matter). takeRestoreIntent promotes it to module scope
+  // and clears sessionStorage on first read, so this survives the remount burst.
+  // Freeze the values in refs so later renders (e.g. after the module intent is
+  // cleared) can't flip initialPageCount back to 1 and reset the list.
+  const intentReadRef = useRef(false);
   const initialPageCountRef = useRef(1);
+  const restoreScrollTopRef = useRef(0);
+  const shouldRestoreRef = useRef(false);
   const restoreAppliedRef = useRef(false);
-
-  if (!didReadRef.current) {
-    didReadRef.current = true;
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = sessionStorage.getItem(snapshotKey);
-        if (raw) {
-          const snap = JSON.parse(raw) as ScrollSnapshot;
-          // Clamp pages: reject Infinity/NaN/negative; cap at 50 to prevent
-          // unbounded sequential fetches from a tampered sessionStorage value.
-          const rawPages = snap.pages;
-          initialPageCountRef.current =
-            Number.isFinite(rawPages) && rawPages > 0
-              ? Math.min(50, Math.floor(rawPages))
-              : 1;
-          // Validate scrollTop; default to 0 for non-finite values.
-          pendingRestoreRef.current = {
-            pages: initialPageCountRef.current,
-            scrollTop: Number.isFinite(snap.scrollTop) ? snap.scrollTop : 0,
-          };
-        }
-      } catch {
-        /* ignore malformed snapshot */
-      }
+  if (!intentReadRef.current) {
+    intentReadRef.current = true;
+    const it = takeRestoreIntent(snapshotKey);
+    if (it) {
+      initialPageCountRef.current = it.pages;
+      restoreScrollTopRef.current = it.scrollTop;
+      shouldRestoreRef.current = true;
     }
   }
+  const initialPageCount = initialPageCountRef.current;
 
   const fetchPage = useCallback(async (page: number): Promise<Order[]> => {
     const params = new URLSearchParams({
@@ -152,28 +188,60 @@ function OrdersPageInner() {
   const { items: orders, loading, hasMore, sentinelRef, loadedPages } = useInfiniteScroll<Order>({
     fetchPage,
     pageSize: LIMIT,
-    initialPageCount: initialPageCountRef.current,
+    initialPageCount,
   });
 
-  // Restore scrollTop once all requested pages have loaded and loading is done.
+  // Restore the saved scroll position once the requested pages have loaded.
   // useLayoutEffect fires synchronously after DOM mutations — minimises flash.
   useLayoutEffect(() => {
     if (restoreAppliedRef.current) return;
-    if (loading) return;
-    if (!pendingRestoreRef.current) return;
-    if (orders.length === 0) return;
+    if (!shouldRestoreRef.current) return;
+    if (loading || orders.length === 0) return;
 
-    const el = document.querySelector('main');
-    if (el) {
-      el.scrollTop = pendingRestoreRef.current.scrollTop;
-    }
     restoreAppliedRef.current = true;
-    pendingRestoreRef.current = null;
-    try {
-      sessionStorage.removeItem(snapshotKey);
-    } catch {
-      // sessionStorage may be unavailable (private browsing, quota, etc.)
-    }
+    const target = restoreScrollTopRef.current;
+    const el = document.querySelector('main');
+    if (!el) return;
+    el.scrollTop = target;
+
+    if (typeof window === 'undefined' || typeof requestAnimationFrame === 'undefined') return;
+
+    // After a back-navigation Next.js App Router performs its OWN scroll a few
+    // frames later (it scrolls the route's top into view, natively resetting
+    // <main> to 0), which clobbers the assignment above. Re-assert the target
+    // every frame for a short window to win that race. Abort the instant the
+    // user scrolls so we never fight a real gesture. The loop is intentionally
+    // NOT tied to this effect's cleanup: its deps change during the mount burst,
+    // and framer-motion remounts this page ~200ms after back-nav — a cleanup
+    // would kill the loop mid-window. It is self-terminating (bounded window).
+    let aborted = false;
+    let rafId = 0;
+    const stop = () => {
+      aborted = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener('wheel', stop);
+      window.removeEventListener('touchstart', stop);
+      window.removeEventListener('keydown', stop);
+      restoreIntent = null; // consumed — no further restores for this intent
+    };
+    window.addEventListener('wheel', stop, { passive: true });
+    window.addEventListener('touchstart', stop, { passive: true });
+    window.addEventListener('keydown', stop);
+
+    const startTs = Date.now();
+    const startPath = window.location.pathname;
+    const reassert = () => {
+      if (aborted) return;
+      // Stop if we've navigated away — never scroll a different page.
+      if (window.location.pathname !== startPath) { stop(); return; }
+      el.scrollTop = target;
+      if (Date.now() - startTs < 500) {
+        rafId = requestAnimationFrame(reassert);
+      } else {
+        stop();
+      }
+    };
+    rafId = requestAnimationFrame(reassert);
   }, [loading, orders.length, snapshotKey]);
 
   // Relative time: "Vừa xong" < 60s; "X giờ trước" < 24h; "X ngày trước" otherwise.

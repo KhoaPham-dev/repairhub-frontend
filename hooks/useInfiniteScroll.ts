@@ -69,25 +69,21 @@ export function useInfiniteScroll<T>({
 
   // Initial load (and reload on fetchPage reference change, i.e., after reset).
   useEffect(() => {
-    // First-run-only semantics: use initialPageCount on the very first mount to
-    // restore N pages; all subsequent runs (filter/sort changes) use count = 1.
-    const count = initialRestoreDoneRef.current ? 1 : initialPageCount;
-    initialRestoreDoneRef.current = true;
+    // First-run-only semantics: honour initialPageCount on the first COMPLETED
+    // load (to restore N pages); later runs (filter/sort changes) load one page.
+    // The "done" flag is set only on successful, non-cancelled completion — NOT at
+    // effect start — so React Strict Mode's dev-only setup→cleanup→setup (which
+    // cancels the first fetch before it finishes) can't consume it and downgrade
+    // the real load to a single page.
+    const count = Math.max(1, initialRestoreDoneRef.current ? 1 : initialPageCount);
 
     setItems([]);
     setPage(0);
     hasMoreRef.current = true;
     setHasMore(true);
 
-    if (count <= 1) {
-      // Standard single-page initial load — unchanged behaviour.
-      load(0, false);
-      return;
-    }
-
-    // Multi-page restore fetch.
-    // Bypass the guarded `load` helper so sequential pages don't trip each other's
-    // in-flight guard; manage loadingRef manually instead.
+    // Sequentially fetch pages 0..count-1. Bypass the guarded `load` helper so the
+    // pages don't trip each other's in-flight guard; manage loadingRef manually.
     let cancelled = false;
 
     (async () => {
@@ -116,6 +112,9 @@ export function useInfiniteScroll<T>({
           setPage(lastPage);
           hasMoreRef.current = more;
           setHasMore(more);
+          // Mark the initial multi-page restore as done only now that it actually
+          // completed, so a later filter/sort change loads a single page.
+          initialRestoreDoneRef.current = true;
         }
       } finally {
         if (!cancelled) {
@@ -128,7 +127,7 @@ export function useInfiniteScroll<T>({
     return () => {
       cancelled = true;
     };
-  }, [fetchPage, load, initialPageCount]);
+  }, [fetchPage, initialPageCount]);
 
   // IntersectionObserver wired to the sentinel element.
   const observerRef = useRef<IntersectionObserver | null>(null);
