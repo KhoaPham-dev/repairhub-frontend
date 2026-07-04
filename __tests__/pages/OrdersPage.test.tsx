@@ -261,6 +261,36 @@ describe('OrdersPage', () => {
     setItemSpy.mockRestore();
   });
 
+  // -------------------------------------------------------------------------
+  // MUST FIX 2 — clamp huge/hostile pages values from sessionStorage
+  // -------------------------------------------------------------------------
+
+  it('clamps a huge pages value from sessionStorage; bounded fetch count', async () => {
+    // Write a tampered snapshot directly as a raw JSON string (9 999 pages).
+    // The clamp (Math.min(50, ...)) means at most 50 pages would be requested;
+    // in practice the loop stops after 1 because MOCK_ORDERS (3 items) < pageSize (20).
+    sessionStorage.setItem('orders-scroll:', '{"pages":9999,"scrollTop":0}');
+    mockGet.mockResolvedValue({ data: MOCK_ORDERS });
+
+    render(<OrdersPage />);
+    await waitFor(() => screen.getByText('Nguyễn Văn A · 0901234567'));
+
+    // Must not attempt 9 999 fetches — stops at 1 due to short page (< pageSize).
+    expect(mockGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('clamps pages: null (JSON.stringify of Infinity) to 1 and loads a single page', async () => {
+    // JSON.stringify({pages: Infinity}) → '{"pages":null,...}' because JSON serialises
+    // Infinity as null. Number.isFinite(null) === false → defaults to 1.
+    sessionStorage.setItem('orders-scroll:', '{"pages":null,"scrollTop":0}');
+    mockGet.mockResolvedValue({ data: MOCK_ORDERS });
+
+    render(<OrdersPage />);
+    await waitFor(() => screen.getByText('Nguyễn Văn A · 0901234567'));
+
+    expect(mockGet).toHaveBeenCalledTimes(1);
+  });
+
   it('mounting with a sessionStorage snapshot requests N pages and restores scrollTop', async () => {
     const snapshotKey = 'orders-scroll:';
     const snapshot = { scrollTop: 320, pages: 2 };

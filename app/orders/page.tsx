@@ -98,23 +98,40 @@ function OrdersPageInner() {
   const snapshotKey = `orders-scroll:${searchParams.toString()}`;
 
   // Read the snapshot from sessionStorage once at mount.
-  // The lazy useState initializer runs synchronously on the client (only once),
-  // and the typeof-window guard prevents it from running during SSR.
+  // Using a ref guard (didReadRef) instead of a useState lazy initialiser avoids
+  // the impure-initialiser problem: lazy initialisers are double-invoked under
+  // React Strict Mode, which would mutate pendingRestoreRef twice.
+  // The didReadRef guard makes the read one-shot on the client.
+  const didReadRef = useRef(false);
   const pendingRestoreRef = useRef<ScrollSnapshot | null>(null);
+  const initialPageCountRef = useRef(1);
   const restoreAppliedRef = useRef(false);
 
-  const [initialPageCount] = useState<number>(() => {
-    if (typeof window === 'undefined') return 1;
-    try {
-      const raw = sessionStorage.getItem(snapshotKey);
-      if (!raw) return 1;
-      const snap = JSON.parse(raw) as ScrollSnapshot;
-      pendingRestoreRef.current = snap;
-      return Math.max(1, snap.pages ?? 1);
-    } catch {
-      return 1;
+  if (!didReadRef.current) {
+    didReadRef.current = true;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(snapshotKey);
+        if (raw) {
+          const snap = JSON.parse(raw) as ScrollSnapshot;
+          // Clamp pages: reject Infinity/NaN/negative; cap at 50 to prevent
+          // unbounded sequential fetches from a tampered sessionStorage value.
+          const rawPages = snap.pages;
+          initialPageCountRef.current =
+            Number.isFinite(rawPages) && rawPages > 0
+              ? Math.min(50, Math.floor(rawPages))
+              : 1;
+          // Validate scrollTop; default to 0 for non-finite values.
+          pendingRestoreRef.current = {
+            pages: initialPageCountRef.current,
+            scrollTop: Number.isFinite(snap.scrollTop) ? snap.scrollTop : 0,
+          };
+        }
+      } catch {
+        /* ignore malformed snapshot */
+      }
     }
-  });
+  }
 
   const fetchPage = useCallback(async (page: number): Promise<Order[]> => {
     const params = new URLSearchParams({
@@ -135,7 +152,7 @@ function OrdersPageInner() {
   const { items: orders, loading, hasMore, sentinelRef, loadedPages } = useInfiniteScroll<Order>({
     fetchPage,
     pageSize: LIMIT,
-    initialPageCount,
+    initialPageCount: initialPageCountRef.current,
   });
 
   // Restore scrollTop once all requested pages have loaded and loading is done.

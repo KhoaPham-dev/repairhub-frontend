@@ -286,4 +286,83 @@ describe('useInfiniteScroll', () => {
     expect(result.current.hasMore).toBe(false);
     expect(result.current.loadedPages).toBe(2);
   });
+
+  // -------------------------------------------------------------------------
+  // MUST FIX 1 — initialPageCount must be first-run-only
+  // -------------------------------------------------------------------------
+
+  it('after a multi-page restore, swapping fetchPage (filter change) triggers only ONE fetch', async () => {
+    // First mount: restore 3 pages.
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+    const page1 = Array.from({ length: 20 }, (_, i) => ({ id: 20 + i }));
+    const page2 = Array.from({ length: 20 }, (_, i) => ({ id: 40 + i }));
+    const fetchPage1 = jest.fn()
+      .mockResolvedValueOnce(page0)
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2);
+
+    const filtered = [{ id: 100 }];
+    const fetchPage2 = jest.fn().mockResolvedValue(filtered);
+
+    const { result, rerender } = renderHook(
+      ({ fn }: { fn: (page: number) => Promise<{ id: number }[]> }) =>
+        useInfiniteScroll({ fetchPage: fn, pageSize: 20, initialPageCount: 3 }),
+      { initialProps: { fn: fetchPage1 } },
+    );
+
+    // Wait for the full 3-page restore to complete.
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(fetchPage1).toHaveBeenCalledTimes(3);
+    expect(result.current.items).toHaveLength(60);
+
+    // Simulate a filter change: swap to a new fetchPage reference.
+    rerender({ fn: fetchPage2 });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Must fetch only 1 page (page 0), NOT 3 pages, on the filter-change reload.
+    expect(fetchPage2).toHaveBeenCalledTimes(1);
+    expect(fetchPage2).toHaveBeenCalledWith(0);
+    expect(result.current.items).toEqual(filtered);
+  });
+
+  // -------------------------------------------------------------------------
+  // MUST FIX 4 — cancellation on unmount
+  // -------------------------------------------------------------------------
+
+  it('resolving a deferred fetchPage after unmount does not update items (cancelled guard)', async () => {
+    const page0 = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+
+    // Page 1 is deferred so we can control when it resolves.
+    let resolvePage1!: (v: { id: number }[]) => void;
+    const deferredPage1 = new Promise<{ id: number }[]>((resolve) => {
+      resolvePage1 = resolve;
+    });
+
+    const fetchPage = jest.fn()
+      .mockResolvedValueOnce(page0)   // page 0: resolves immediately
+      .mockReturnValueOnce(deferredPage1) // page 1: deferred
+      .mockResolvedValue([]);          // page 2+: never reached
+
+    const { unmount } = renderHook(() =>
+      useInfiniteScroll({ fetchPage, pageSize: 20, initialPageCount: 3 }),
+    );
+
+    // Wait until page 0 has resolved and page 1 is in-flight.
+    await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
+
+    // Unmount while page 1 is still pending.
+    unmount();
+
+    // Resolve page 1 after the component is gone.
+    act(() => { resolvePage1([{ id: 100 }, { id: 101 }]); });
+
+    // Allow all microtasks to settle.
+    await act(async () => {});
+
+    // The cancelled flag must have prevented page 2 from being requested
+    // (the loop returns early after the `if (cancelled) return` check).
+    // fetchPage should have been called exactly twice: page 0 and page 1.
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+  });
 });

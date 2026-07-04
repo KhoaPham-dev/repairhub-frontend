@@ -39,6 +39,11 @@ export function useInfiniteScroll<T>({
   const loadingRef = useRef(false);
   const hasMoreRef = useRef(true);
 
+  // Ensures initialPageCount is only honoured on the very first effect run.
+  // Subsequent runs (filter/sort changes that produce a new fetchPage reference)
+  // always do a normal single-page load, not a multi-page restore.
+  const initialRestoreDoneRef = useRef(false);
+
   // Keep refs in sync with state so the observer callback captures live values.
   useEffect(() => { loadingRef.current = loading; }, [loading]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
@@ -64,12 +69,15 @@ export function useInfiniteScroll<T>({
 
   // Initial load (and reload on fetchPage reference change, i.e., after reset).
   useEffect(() => {
+    // First-run-only semantics: use initialPageCount on the very first mount to
+    // restore N pages; all subsequent runs (filter/sort changes) use count = 1.
+    const count = initialRestoreDoneRef.current ? 1 : initialPageCount;
+    initialRestoreDoneRef.current = true;
+
     setItems([]);
     setPage(0);
     hasMoreRef.current = true;
     setHasMore(true);
-
-    const count = initialPageCount;
 
     if (count <= 1) {
       // Standard single-page initial load — unchanged behaviour.
