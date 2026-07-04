@@ -81,6 +81,9 @@ function takeRestoreIntent(key: string): RestoreIntent | null {
       if (raw) {
         const snap = JSON.parse(raw) as ScrollSnapshot;
         // One-shot: consume immediately so a fresh (non-back) visit won't restore.
+        // Note: the TTL and this consume-once solve *different* problems — the TTL
+        // bounds the module-scope fallback across the remount burst; removing the
+        // key here is what prevents a later non-back navigation from restoring.
         sessionStorage.removeItem(key);
         // Clamp pages (reject Infinity/NaN/negative; cap at 50) to bound refetches
         // against a tampered value; validate scrollTop.
@@ -94,7 +97,7 @@ function takeRestoreIntent(key: string): RestoreIntent | null {
     }
   }
   // sessionStorage already consumed (remount burst) — fall back to module intent.
-  if (restoreIntent && restoreIntent.expiresAt <= now) restoreIntent = null;
+  if (restoreIntent && restoreIntent.expiresAt <= now) restoreIntent = null; // expired
   if (restoreIntent && restoreIntent.key === key) return restoreIntent;
   return null;
 }
@@ -226,7 +229,7 @@ function OrdersPageInner() {
     };
     window.addEventListener('wheel', stop, { passive: true });
     window.addEventListener('touchstart', stop, { passive: true });
-    window.addEventListener('keydown', stop);
+    window.addEventListener('keydown', stop); // not passive — keydown doesn't affect scroll perf
 
     const startTs = Date.now();
     const startPath = window.location.pathname;
@@ -321,12 +324,17 @@ function OrdersPageInner() {
               key={order.id}
               onClick={() => {
                 // Snapshot scroll position and loaded page count before navigating.
+                // Only when settled: mid-load `loadedPages` is optimistic (the page
+                // index increments before the fetch resolves), so snapshotting while
+                // loading would record one extra page and over-fetch on restore.
                 try {
-                  const el = document.querySelector('main');
-                  sessionStorage.setItem(
-                    snapshotKey,
-                    JSON.stringify({ scrollTop: el?.scrollTop ?? 0, pages: loadedPages }),
-                  );
+                  if (!loading) {
+                    const el = document.querySelector('main');
+                    sessionStorage.setItem(
+                      snapshotKey,
+                      JSON.stringify({ scrollTop: el?.scrollTop ?? 0, pages: loadedPages }),
+                    );
+                  }
                 } catch {
                   // sessionStorage may be unavailable (private browsing, quota, etc.)
                 }

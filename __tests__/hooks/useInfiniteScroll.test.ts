@@ -288,7 +288,7 @@ describe('useInfiniteScroll', () => {
   });
 
   // -------------------------------------------------------------------------
-  // MUST FIX 1 — initialPageCount must be first-run-only
+  // Regression — initialPageCount must be first-run-only (filter change → 1 fetch)
   // -------------------------------------------------------------------------
 
   it('after a multi-page restore, swapping fetchPage (filter change) triggers only ONE fetch', async () => {
@@ -327,7 +327,7 @@ describe('useInfiniteScroll', () => {
   });
 
   // -------------------------------------------------------------------------
-  // MUST FIX 4 — cancellation on unmount
+  // Regression — cancellation on unmount (no setState after unmount)
   // -------------------------------------------------------------------------
 
   it('resolving a deferred fetchPage after unmount does not update items (cancelled guard)', async () => {
