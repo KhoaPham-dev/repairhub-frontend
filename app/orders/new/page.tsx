@@ -74,7 +74,7 @@ export default function NewOrderPage() {
 
   const isBaoHanhMode = products.length === 1 && products[0].product_type === 'BAO_HANH';
 
-  const hasCustomer = !!(selectedCustomer || (newCustomer.phone.trim() && newCustomer.name.trim()));
+  const hasCustomer = !!(selectedCustomer || (newCustomer.phone.trim() && newCustomer.name.trim()) || (isBaoHanhMode && selectedWarranty));
   const allProductsFilled = products.every(
     (p) => p.device_name.trim() && p.fault_description.trim() && p.images.length > 0,
   );
