@@ -158,7 +158,7 @@ export default function NewOrderPage() {
     if (isBaoHanhMode && customerQuery) searchBhWarranties(customerQuery);
     if (!isBaoHanhMode) { setBhWarranties([]); setSelectedWarranty(null); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBaoHanhMode]);
+  }, [isBaoHanhMode, customerQuery]);
 
   async function handleBhSubmit(e: FormEvent) {
     e.preventDefault();
