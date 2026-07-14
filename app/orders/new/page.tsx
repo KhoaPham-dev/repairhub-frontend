@@ -503,7 +503,7 @@ export default function NewOrderPage() {
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           {isBaoHanhMode ? (
-            <button type="submit" disabled={!canSubmitBaoHanh}
+            <button type="button" onClick={handleBhSubmit} disabled={!canSubmitBaoHanh}
               className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted">
               {loading ? 'Đang tạo...' : 'Tạo đơn bảo hành'}
             </button>
