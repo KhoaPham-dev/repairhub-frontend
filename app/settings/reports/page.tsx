@@ -128,11 +128,27 @@ export default function ReportsPage() {
     setGenerating(true);
     setErrorMsg(null);
     try {
+      // Validate custom date range
+      if (periodType === 'custom') {
+        if (!customRange.start || !customRange.end) {
+          setErrorMsg('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc');
+          setGenerating(false);
+          return;
+        }
+        const startDate = new Date(customRange.start);
+        const endDate = new Date(customRange.end);
+        if (endDate < startDate) {
+          setErrorMsg('Ngày kết thúc phải sau ngày bắt đầu');
+          setGenerating(false);
+          return;
+        }
+      }
+
       let payload: { period?: 'this_month' | 'last_month'; period_start?: string; period_end?: string } = {};
 
       if (periodType === 'this_month') {
         payload = { period: 'this_month' };
-      } else if (periodType === 'custom' && customRange.start && customRange.end) {
+      } else if (periodType === 'custom') {
         payload = { period_start: customRange.start, period_end: customRange.end };
       }
 
@@ -154,6 +170,10 @@ export default function ReportsPage() {
     }
   }
 
+  // Disable generate button when custom dates are invalid
+  const isGenerateDisabled = generating ||
+    (periodType === 'custom' && (!customRange.start || !customRange.end));
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-bg pb-24">
@@ -163,7 +183,7 @@ export default function ReportsPage() {
           right={
             <button
               onClick={handleGenerate}
-              disabled={generating}
+              disabled={isGenerateDisabled}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-[#0B0B0B] rounded-xl text-sm font-medium disabled:bg-surface disabled:text-text-muted disabled:cursor-not-allowed"
               aria-label="Tạo báo cáo"
             >
@@ -215,7 +235,11 @@ export default function ReportsPage() {
                         type="date"
                         value={customRange.start}
                         onChange={(e) => setCustomRange((prev) => ({ ...prev, start: e.target.value }))}
-                        className="w-full px-3 py-2 bg-surface-alt border border-border-subtle rounded-xl text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
+                        className={`w-full px-3 py-2 bg-surface-alt border rounded-xl text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent/50 ${
+                          customRange.start && customRange.end && customRange.end < customRange.start
+                            ? 'border-red-500'
+                            : 'border-border-subtle'
+                        }`}
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
                     </div>
@@ -227,12 +251,21 @@ export default function ReportsPage() {
                         type="date"
                         value={customRange.end}
                         onChange={(e) => setCustomRange((prev) => ({ ...prev, end: e.target.value }))}
-                        className="w-full px-3 py-2 bg-surface-alt border border-border-subtle rounded-xl text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
+                        className={`w-full px-3 py-2 bg-surface-alt border rounded-xl text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent/50 ${
+                          customRange.start && customRange.end && customRange.end < customRange.start
+                            ? 'border-red-500'
+                            : 'border-border-subtle'
+                        }`}
                       />
                       <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
                     </div>
                   </div>
                 </div>
+                {customRange.start && customRange.end && customRange.end < customRange.start && (
+                  <p className="text-xs text-red-400 -mt-2">
+                    ⚠️ Ngày kết thúc phải sau ngày bắt đầu
+                  </p>
+                )}
               </div>
             )}
           </div>
