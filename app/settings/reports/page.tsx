@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw, Calendar } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
 import Spinner from '@/components/Spinner';
@@ -65,6 +65,8 @@ function StatusBadge({ status }: { status: RevenueReport['status'] }) {
   );
 }
 
+type PeriodType = 'this_month' | 'custom';
+
 async function downloadReport(report: RevenueReport): Promise<void> {
   const token = getToken();
   const res = await fetch(`${API_BASE}/api/reports/${report.id}/download`, {
@@ -90,6 +92,9 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [periodType, setPeriodType] = useState<PeriodType>('this_month');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
   const loadReports = useCallback(() => {
     setLoading(true);
@@ -112,7 +117,15 @@ export default function ReportsPage() {
     setGenerating(true);
     setErrorMsg(null);
     try {
-      const r = await api.post<{ success: boolean; data: RevenueReport }>('/reports/generate');
+      let payload: { period?: 'this_month' | 'last_month'; period_start?: string; period_end?: string } = {};
+
+      if (periodType === 'this_month') {
+        payload = { period: 'this_month' };
+      } else if (periodType === 'custom' && customRange.start && customRange.end) {
+        payload = { period_start: customRange.start, period_end: customRange.end };
+      }
+
+      const r = await api.post<{ success: boolean; data: RevenueReport }>('/reports/generate', payload);
       // Prepend new report to top of list
       setReports((prev) => [r.data, ...prev]);
     } catch (err) {
@@ -150,6 +163,69 @@ export default function ReportsPage() {
             </button>
           }
         />
+
+        {/* Period Selector */}
+        <div className="px-4 pt-4">
+          <div className="bg-surface rounded-2xl border border-border-subtle p-4">
+            <p className="text-sm font-medium text-text-base mb-3">Kỳ báo cáo</p>
+
+            {/* Period Type Toggle */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => { setPeriodType('this_month'); setShowCustomRange(false); }}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  periodType === 'this_month' && !showCustomRange
+                    ? 'bg-accent text-[#0B0B0B]'
+                    : 'bg-surface-alt text-text-muted border border-border-subtle'
+                }`}
+              >
+                Tháng Này
+              </button>
+              <button
+                onClick={() => { setPeriodType('custom'); setShowCustomRange(true); }}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  periodType === 'custom' || showCustomRange
+                    ? 'bg-accent text-[#0B0B0B]'
+                    : 'bg-surface-alt text-text-muted border border-border-subtle'
+                }`}
+              >
+                Chọn ngày
+              </button>
+            </div>
+
+            {/* Custom Date Range Picker */}
+            {(periodType === 'custom' || showCustomRange) && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-text-muted mb-1.5">Từ ngày</label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={customRange.start}
+                        onChange={(e) => setCustomRange((prev) => ({ ...prev, start: e.target.value }))}
+                        className="w-full px-3 py-2 bg-surface-alt border border-border-subtle rounded-xl text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-text-muted mb-1.5">Đến ngày</label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={customRange.end}
+                        onChange={(e) => setCustomRange((prev) => ({ ...prev, end: e.target.value }))}
+                        className="w-full px-3 py-2 bg-surface-alt border border-border-subtle rounded-xl text-sm text-text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="px-4 pt-3 space-y-3">
           {errorMsg && (
