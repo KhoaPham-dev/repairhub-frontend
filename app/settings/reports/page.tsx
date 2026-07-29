@@ -25,12 +25,23 @@ interface ApiListResponse {
   data: RevenueReport[];
 }
 
-/** Format ISO date string as DD/MM/YYYY */
+/** Format ISO date string as DD/MM/YYYY using local timezone */
 function formatDate(iso: string): string {
+  // Parse the ISO date and format using local timezone
+  // The ISO string is stored in UTC, but represents a VN date
+  // We need to extract the date components as they would be in VN time
   const d = new Date(iso);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
+  // Use Intl.DateTimeFormat to get the correct local date
+  const formatter = new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh'
+  });
+  const parts = formatter.formatToParts(d);
+  const day = parts.find(p => p.type === 'day')?.value || '01';
+  const month = parts.find(p => p.type === 'month')?.value || '01';
+  const year = parts.find(p => p.type === 'year')?.value || '2026';
   return `${day}/${month}/${year}`;
 }
 
