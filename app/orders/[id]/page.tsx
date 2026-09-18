@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Upload, ChevronDown } from 'lucide-react';
+import { Upload, ChevronDown, Play } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
@@ -12,6 +12,7 @@ import ImageThumb from '@/components/ImageThumb';
 import ImageLightbox from '@/components/ImageLightbox';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
+import { MEDIA_ACCEPT, isVideoPath, pickValidMediaFiles } from '@/lib/media';
 
 interface SourceOrderHistoryEntry {
   id: string;
@@ -73,9 +74,10 @@ function parseMoney(s: string): number {
   return parseInt(s.replace(/\D/g, ''), 10) || 0;
 }
 
-// True when the order already has a COMPLETION image uploaded after its most
-// recent status change — i.e. a retry after an upload succeeded but the
-// status PUT failed would not need another image re-selected.
+// True when the order already has a COMPLETION photo or video uploaded after
+// its most recent status change — i.e. a retry after an upload succeeded but
+// the status PUT failed would not need another file re-selected. A video
+// counts the same as a photo here; only image_type/uploaded_at matter.
 //
 // Only rows that are a real status transition (old_status !== new_status,
 // with a null old_status counting as a transition — the order's creation
@@ -158,7 +160,7 @@ export default function OrderDetailPage() {
           throw new Error('Vui lòng nhập ghi chú khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
         }
         if (newImages.length === 0 && !(order && hasFreshCompletionImage(order))) {
-          throw new Error('Vui lòng tải ảnh khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
+          throw new Error('Vui lòng tải ảnh hoặc video khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
         }
       }
 
@@ -272,22 +274,39 @@ export default function OrderDetailPage() {
             <Card>
               <h3 className="font-semibold text-text-base mb-3 text-sm">Ảnh đã lưu ({order.images.length})</h3>
               <div className="grid grid-cols-3 gap-2">
-                {order.images.map((img, i) => (
-                  <button
-                    key={img.id}
-                    type="button"
-                    onClick={() => setLightboxIndex(i)}
-                    className="block w-full h-24 rounded-lg overflow-hidden bg-surface-alt active:opacity-80"
-                    aria-label="Mở ảnh đầy đủ"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`${API_BASE}/uploads/${img.image_path}`}
-                      alt={img.image_type}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+                {order.images.map((img, i) => {
+                  const isVideo = isVideoPath(img.image_path);
+                  return (
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => setLightboxIndex(i)}
+                      className="relative block w-full h-24 rounded-lg overflow-hidden bg-surface-alt active:opacity-80"
+                      aria-label={isVideo ? 'Mở video đầy đủ' : 'Mở ảnh đầy đủ'}
+                    >
+                      {isVideo ? (
+                        <>
+                          <video
+                            src={`${API_BASE}/uploads/${img.image_path}`}
+                            muted
+                            preload="metadata"
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                            <Play size={20} className="text-white" fill="white" />
+                          </span>
+                        </>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`${API_BASE}/uploads/${img.image_path}`}
+                          alt={img.image_type}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </Card>
           )}
@@ -301,6 +320,7 @@ export default function OrderDetailPage() {
               src: `${API_BASE}/uploads/${img.image_path}`,
               alt: img.image_type,
               downloadFilename: img.image_path.split('/').pop(),
+              isVideo: isVideoPath(img.image_path),
             }))}
           />
 
@@ -356,7 +376,7 @@ export default function OrderDetailPage() {
                   </div>
                   {evidenceRequired && (
                     <p className="text-xs text-red-400">
-                      Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú khi chuyển sang trạng thái này
+                      Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú khi chuyển sang trạng thái này
                       {orderHasFreshImage && ' (đã có ảnh mới)'}
                     </p>
                   )}
@@ -398,7 +418,7 @@ export default function OrderDetailPage() {
                 {/* Image upload (appendable) */}
                 <Card className={imageRequirementUnmet ? 'border-red-500' : ''}>
                   <h3 id="them-anh-heading" className="font-semibold text-text-base mb-3 text-sm">
-                    Thêm ảnh{evidenceRequired && (
+                    Thêm ảnh / video{evidenceRequired && (
                       <span className="text-red-400" aria-hidden="true"> *</span>
                     )}
                     {evidenceRequired && <span className="sr-only"> (bắt buộc)</span>}
@@ -408,7 +428,7 @@ export default function OrderDetailPage() {
                     <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                     {/* No `capture` attr — that would force camera-only on mobile.
                         Without it, the OS picker offers Take Photo + Photo Library. */}
-                    <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
+                    <input type="file" accept={MEDIA_ACCEPT} multiple
                       aria-required={evidenceRequired}
                       aria-labelledby="them-anh-heading"
                       onChange={(e) => {
@@ -416,9 +436,11 @@ export default function OrderDetailPage() {
                         // reset — otherwise React's lazy state-updater reads
                         // an empty FileList (because e.target.value='' clears
                         // e.target.files) and the state never changes.
-                        const newFiles = Array.from(e.target.files ?? []);
-                        setNewImages((prev) => [...prev, ...newFiles]);
+                        const picked = Array.from(e.target.files ?? []);
                         e.target.value = '';
+                        const { valid, error: pickError } = pickValidMediaFiles(picked);
+                        if (pickError) setError(pickError);
+                        if (valid.length > 0) setNewImages((prev) => [...prev, ...valid]);
                       }}
                       className="hidden" />
                   </label>

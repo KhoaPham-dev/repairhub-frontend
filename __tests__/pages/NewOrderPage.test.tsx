@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { MEDIA_ACCEPT } from '@/lib/media';
 
 // jsdom does not implement URL.createObjectURL; mock it so ImageThumb renders without crashing
 global.URL.createObjectURL = jest.fn(() => 'blob:test');
@@ -414,8 +415,45 @@ describe('NewOrderPage', () => {
     render(<NewOrderPage />);
     await waitFor(() => {
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,image/heic,image/heif');
+      expect(fileInput).toHaveAttribute('accept', MEDIA_ACCEPT);
     });
+  });
+
+  it('product image picker accepts a video file', async () => {
+    render(<NewOrderPage />);
+    await waitFor(() => document.querySelector('input[type="file"]'));
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const clip = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
+    fireEvent.change(fileInput, { target: { files: [clip] } });
+
+    expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
+    expect(screen.queryByText('Định dạng tệp không hợp lệ')).not.toBeInTheDocument();
+  });
+
+  it('product image picker rejects an unsupported file type with a visible error', async () => {
+    render(<NewOrderPage />);
+    await waitFor(() => document.querySelector('input[type="file"]'));
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const badFile = new File(['x'], 'doc.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [badFile] } });
+
+    expect(screen.getByText('Định dạng tệp không hợp lệ')).toBeInTheDocument();
+    expect(screen.queryByText(/Đã chọn/)).not.toBeInTheDocument();
+  });
+
+  it('product image picker rejects an oversize video with the size-limit error', async () => {
+    render(<NewOrderPage />);
+    await waitFor(() => document.querySelector('input[type="file"]'));
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const hugeClip = new File(['x'], 'big.mp4', { type: 'video/mp4' });
+    Object.defineProperty(hugeClip, 'size', { value: 101 * 1024 * 1024, configurable: true });
+    fireEvent.change(fileInput, { target: { files: [hugeClip] } });
+
+    expect(screen.getByText('Tệp quá lớn (ảnh tối đa 10MB, video tối đa 100MB)')).toBeInTheDocument();
+    expect(screen.queryByText(/Đã chọn/)).not.toBeInTheDocument();
   });
 
   it('RH-142: 2-product order sends exactly ONE fetch to /api/orders/bulk-with-images with correct payload and image fields', async () => {

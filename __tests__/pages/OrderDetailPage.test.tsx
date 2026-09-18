@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { MEDIA_ACCEPT } from '@/lib/media';
 
 // jsdom does not implement URL.createObjectURL; mock it so ImageThumb renders without crashing
 global.URL.createObjectURL = jest.fn(() => 'blob:test');
@@ -262,7 +263,7 @@ describe('OrderDetailPage', () => {
     render(<OrderDetailPage />);
     await waitFor(() => screen.getByText('Lưu thay đổi'));
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp,image/heic,image/heif');
+    expect(fileInput).toHaveAttribute('accept', MEDIA_ACCEPT);
   });
 
   it('RH-139: failed image upload (ok: false) on update shows error and does not show success toast', async () => {
@@ -293,6 +294,35 @@ describe('OrderDetailPage', () => {
     expect(screen.queryByText('Cập nhật thành công')).not.toBeInTheDocument();
   });
 
+  describe('saved media gallery', () => {
+    it('renders a muted, preload=metadata <video> with a play icon for a saved .mp4, and an <img> for a saved photo', async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          ...MOCK_ORDER,
+          images: [
+            { id: 'v1', image_path: 'orders/o1/clip.mp4', image_type: 'COMPLETION', uploaded_at: '2024-01-01T00:00:00Z' },
+            { id: 'p1', image_path: 'orders/o1/photo.jpg', image_type: 'COMPLETION', uploaded_at: '2024-01-01T00:00:00Z' },
+          ],
+        },
+      });
+      const { container } = render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Ảnh đã lưu (2)'));
+
+      const video = container.querySelector('video') as HTMLVideoElement;
+      expect(video).toBeInTheDocument();
+      expect(video).toHaveAttribute('preload', 'metadata');
+      expect(video.muted).toBe(true);
+      expect(video.getAttribute('src')).toContain('clip.mp4');
+
+      const img = container.querySelector('img') as HTMLImageElement;
+      expect(img).toBeInTheDocument();
+      expect(img.src).toContain('photo.jpg');
+
+      expect(screen.getByLabelText('Mở video đầy đủ')).toBeInTheDocument();
+      expect(screen.getByLabelText('Mở ảnh đầy đủ')).toBeInTheDocument();
+    });
+  });
+
   describe('evidence-required statuses (DA_GIAO / HUY_TRA_MAY)', () => {
     // Convenience helpers used across several tests below.
     function selectStatus(value: string) {
@@ -306,22 +336,31 @@ describe('OrderDetailPage', () => {
       const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
       fireEvent.change(fileInput, { target: { files: [img] } });
     }
+    function pickFiles(...files: File[]) {
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(fileInput, { target: { files } });
+    }
+    function oversizeFile(name: string, type: string, bytes: number): File {
+      const file = new File([new Uint8Array(1)], name, { type });
+      Object.defineProperty(file, 'size', { value: bytes, configurable: true });
+      return file;
+    }
 
     it('shows the required-evidence note when selecting DA_GIAO or HUY_TRA_MAY, not for TRA_HANG or other statuses', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Cập nhật trạng thái'));
 
       selectStatus('DANG_KIEM_TRA');
-      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).not.toBeInTheDocument();
 
       selectStatus('TRA_HANG');
-      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).not.toBeInTheDocument();
 
       selectStatus('DA_GIAO');
-      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).toBeInTheDocument();
+      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).toBeInTheDocument();
 
       selectStatus('HUY_TRA_MAY');
-      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).toBeInTheDocument();
+      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).toBeInTheDocument();
     });
 
     it('toggles aria-required on the notes textarea and file input when DA_GIAO is selected', async () => {
@@ -343,6 +382,51 @@ describe('OrderDetailPage', () => {
 
       expect(notesInput).toHaveAttribute('aria-required', 'false');
       expect(fileInput).toHaveAttribute('aria-required', 'false');
+    });
+
+    it('accepts a video file selected via the picker', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const clip = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
+      pickFiles(clip);
+
+      expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
+      expect(screen.queryByText('Định dạng tệp không hợp lệ')).not.toBeInTheDocument();
+    });
+
+    it('rejects a file with an unsupported type and shows an error, without adding it', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const badFile = new File(['x'], 'notes.pdf', { type: 'application/pdf' });
+      pickFiles(badFile);
+
+      expect(screen.getByText('Định dạng tệp không hợp lệ')).toBeInTheDocument();
+      expect(screen.queryByText(/Đã chọn/)).not.toBeInTheDocument();
+    });
+
+    it('rejects an oversize video and shows the size-limit error, without adding it', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const hugeClip = oversizeFile('big.mp4', 'video/mp4', 101 * 1024 * 1024);
+      pickFiles(hugeClip);
+
+      expect(screen.getByText('Tệp quá lớn (ảnh tối đa 10MB, video tối đa 100MB)')).toBeInTheDocument();
+      expect(screen.queryByText(/Đã chọn/)).not.toBeInTheDocument();
+    });
+
+    it('rejects an oversize image and shows the image size-limit error, keeping a valid file picked alongside it', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const hugePhoto = oversizeFile('big.jpg', 'image/jpeg', 11 * 1024 * 1024);
+      const okPhoto = new File(['x'], 'ok.jpg', { type: 'image/jpeg' });
+      pickFiles(hugePhoto, okPhoto);
+
+      expect(screen.getByText('Ảnh quá lớn (tối đa 10MB mỗi ảnh)')).toBeInTheDocument();
+      expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
     });
 
     it('disables Save for DA_GIAO with a photo but no notes', async () => {
@@ -402,6 +486,24 @@ describe('OrderDetailPage', () => {
       selectStatus('DA_GIAO');
 
       // Image already fresh, but notes still blank.
+      expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
+      expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
+
+      fillNotes('Đã giao máy cho khách');
+      expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
+    });
+
+    it('enables Save for DA_GIAO when the order already has a fresh COMPLETION video', async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          ...MOCK_ORDER,
+          images: [{ id: 'vid1', image_path: 'orders/o1/clip.mp4', image_type: 'COMPLETION', uploaded_at: '2024-06-01T00:00:00Z' }],
+        },
+      });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      selectStatus('DA_GIAO');
+
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
 

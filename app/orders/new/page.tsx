@@ -8,6 +8,7 @@ import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
 import ImageThumb from '@/components/ImageThumb';
 import { api } from '@/lib/api';
+import { MEDIA_ACCEPT, pickValidMediaFiles } from '@/lib/media';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
@@ -419,12 +420,14 @@ export default function NewOrderPage() {
                           <span className="text-sm font-medium">{bhImages.length > 0 ? `Đã chọn ${bhImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                           <input
                             type="file"
-                            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                            accept={MEDIA_ACCEPT}
                             multiple
                             onChange={(e) => {
-                              const newFiles = Array.from(e.target.files ?? []);
-                              setBhImages([...bhImages, ...newFiles]);
+                              const picked = Array.from(e.target.files ?? []);
                               e.target.value = '';
+                              const { valid, error: pickError } = pickValidMediaFiles(picked);
+                              if (pickError) setError(pickError);
+                              if (valid.length > 0) setBhImages([...bhImages, ...valid]);
                             }}
                             className="hidden"
                           />
@@ -467,12 +470,14 @@ export default function NewOrderPage() {
                       <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
                       {/* No `capture` attr — that would force camera-only on mobile.
                           Without it, the OS picker offers Take Photo + Photo Library. */}
-                      <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
+                      <input type="file" accept={MEDIA_ACCEPT} multiple
                         onChange={(e) => {
-                          const newFiles = Array.from(e.target.files ?? []);
-                          updateProduct(idx, 'images', [...product.images, ...newFiles]);
+                          const picked = Array.from(e.target.files ?? []);
                           // Reset value so the same file can be picked again after removal.
                           e.target.value = '';
+                          const { valid, error: pickError } = pickValidMediaFiles(picked);
+                          if (pickError) setError(pickError);
+                          if (valid.length > 0) updateProduct(idx, 'images', [...product.images, ...valid]);
                         }}
                         className="hidden" />
                     </label>

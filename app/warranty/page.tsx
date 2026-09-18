@@ -7,6 +7,7 @@ import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
+import { isVideoPath } from '@/lib/media';
 
 interface WarrantyResult {
   id: string; order_code: string; device_name: string; fault_description: string;
@@ -68,8 +69,12 @@ export default function WarrantyPage() {
 
           <div className="space-y-4">
             {results.map((r) => {
-              const intakeImgs = r.images?.filter((i) => i.image_type === 'INTAKE') ?? [];
-              const completionImgs = r.images?.filter((i) => i.image_type === 'COMPLETION') ?? [];
+              // Before/after thumbnails only ever show a still image — a
+              // video (if that's what was uploaded) has no useful still to
+              // render here, so skip it and fall back to the next image (if
+              // any) of the same type.
+              const intakeImgs = r.images?.filter((i) => i.image_type === 'INTAKE' && !isVideoPath(i.image_path)) ?? [];
+              const completionImgs = r.images?.filter((i) => i.image_type === 'COMPLETION' && !isVideoPath(i.image_path)) ?? [];
               return (
                 <Card key={r.id}>
                   <div className="flex justify-between items-start mb-2">
