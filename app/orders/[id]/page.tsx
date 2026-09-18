@@ -12,7 +12,7 @@ import ImageThumb from '@/components/ImageThumb';
 import ImageLightbox from '@/components/ImageLightbox';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
-import { MEDIA_ACCEPT, isVideoPath, pickValidMediaFiles } from '@/lib/media';
+import { MEDIA_ACCEPT, MAX_FILES_ORDER_IMAGES, isVideoPath, pickValidMediaFiles } from '@/lib/media';
 
 interface SourceOrderHistoryEntry {
   id: string;
@@ -438,7 +438,10 @@ export default function OrderDetailPage() {
                         // e.target.files) and the state never changes.
                         const picked = Array.from(e.target.files ?? []);
                         e.target.value = '';
-                        const { valid, error: pickError } = pickValidMediaFiles(picked);
+                        const { valid, error: pickError } = pickValidMediaFiles(picked, {
+                          maxCount: MAX_FILES_ORDER_IMAGES,
+                          currentCount: newImages.length,
+                        });
                         if (pickError) setError(pickError);
                         if (valid.length > 0) setNewImages((prev) => [...prev, ...valid]);
                       }}

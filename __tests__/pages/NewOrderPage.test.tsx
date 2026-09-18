@@ -93,6 +93,29 @@ describe('NewOrderPage', () => {
     });
   });
 
+  it('warranty-claim picker caps a single pick at 10 files and shows the cap message', async () => {
+    mockGet.mockResolvedValueOnce({ data: BRANCHES }); // branches on mount
+    mockGet.mockResolvedValueOnce({
+      data: [{ id: 'w1', order_code: 'RH-100', device_name: 'Loa X', warranty_end_date: null }],
+    }); // /warranty/search
+
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Bảo Hành'));
+    fireEvent.click(screen.getByText('Bảo Hành'));
+
+    fireEvent.change(screen.getByPlaceholderText('Số điện thoại *'), { target: { value: '0901234567' } });
+    await waitFor(() => screen.getByText('RH-100'));
+    fireEvent.click(screen.getByText('RH-100'));
+
+    await waitFor(() => screen.getByText('Chọn ảnh / video'));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const files = Array.from({ length: 11 }, (_, i) => new File(['x'], `p${i}.jpg`, { type: 'image/jpeg' }));
+    fireEvent.change(fileInput, { target: { files } });
+
+    expect(screen.getByText('Quá nhiều tệp trong một lần tải lên (tối đa 10)')).toBeInTheDocument();
+    expect(screen.getByText(/Đã chọn 10 ảnh/)).toBeInTheDocument();
+  });
+
   // Note: the warranty package selector (3 / 6 / 12 tháng / Khác) was removed
   // from new-order — quotation + warranty period are now set on the order
   // detail page during the SUA_XONG transition. Tests for those moved out.
@@ -454,6 +477,39 @@ describe('NewOrderPage', () => {
 
     expect(screen.getByText('Tệp quá lớn (ảnh tối đa 10MB, video tối đa 100MB)')).toBeInTheDocument();
     expect(screen.queryByText(/Đã chọn/)).not.toBeInTheDocument();
+  });
+
+  it('product image picker caps a single pick at 50 files and shows the cap message', async () => {
+    render(<NewOrderPage />);
+    await waitFor(() => document.querySelector('input[type="file"]'));
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const files = Array.from({ length: 51 }, (_, i) => new File(['x'], `p${i}.jpg`, { type: 'image/jpeg' }));
+    fireEvent.change(fileInput, { target: { files } });
+
+    expect(screen.getByText('Quá nhiều tệp trong một lần tải lên (tối đa 50)')).toBeInTheDocument();
+    expect(screen.getByText(/Đã chọn 50 ảnh/)).toBeInTheDocument();
+  });
+
+  it('the 50-file cap is shared across all product rows combined, not per row', async () => {
+    render(<NewOrderPage />);
+    await waitFor(() => screen.getByText('Thêm sản phẩm'));
+    fireEvent.click(screen.getByText('Thêm sản phẩm'));
+    await waitFor(() => screen.getByText('Sản phẩm 2'));
+
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    const batch1 = Array.from({ length: 30 }, (_, i) => new File(['x'], `a${i}.jpg`, { type: 'image/jpeg' }));
+    fireEvent.change(fileInputs[0], { target: { files: batch1 } });
+    await waitFor(() => expect(screen.getByText(/Đã chọn 30 ảnh/)).toBeInTheDocument());
+
+    // Product 1 already holds 30 of the shared 50-file budget, so only 20
+    // more (of the 25 picked here) should be accepted for product 2.
+    const batch2 = Array.from({ length: 25 }, (_, i) => new File(['x'], `b${i}.jpg`, { type: 'image/jpeg' }));
+    fireEvent.change(fileInputs[1], { target: { files: batch2 } });
+
+    expect(screen.getByText('Quá nhiều tệp trong một lần tải lên (tối đa 50)')).toBeInTheDocument();
+    expect(screen.getByText(/Đã chọn 30 ảnh/)).toBeInTheDocument();
+    expect(screen.getByText(/Đã chọn 20 ảnh/)).toBeInTheDocument();
   });
 
   it('RH-142: 2-product order sends exactly ONE fetch to /api/orders/bulk-with-images with correct payload and image fields', async () => {

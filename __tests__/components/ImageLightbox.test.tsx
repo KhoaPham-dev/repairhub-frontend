@@ -30,6 +30,11 @@ describe('LightboxMediaSlide', () => {
     expect(container.querySelector('img')).not.toBeInTheDocument();
   });
 
+  it('gives the video an accessible label', () => {
+    render(<LightboxMediaSlide src="https://x/clip.mp4" isVideo />);
+    expect(screen.getByLabelText('Video đính kèm')).toBeInTheDocument();
+  });
+
   it('shows a download fallback link when the video fails to play', () => {
     const { container } = render(
       <LightboxMediaSlide src="https://x/clip.mp4" isVideo downloadFilename="clip.mp4" />

@@ -429,6 +429,32 @@ describe('OrderDetailPage', () => {
       expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
     });
 
+    it('caps a single pick at 20 files and shows the cap message', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const files = Array.from({ length: 21 }, (_, i) => new File(['x'], `p${i}.jpg`, { type: 'image/jpeg' }));
+      pickFiles(...files);
+
+      expect(screen.getByText('Quá nhiều tệp trong một lần tải lên (tối đa 20)')).toBeInTheDocument();
+      expect(screen.getByText(/Đã chọn 20 ảnh/)).toBeInTheDocument();
+    });
+
+    it('rejects further files once already at the 20-file cap', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const firstBatch = Array.from({ length: 20 }, (_, i) => new File(['x'], `p${i}.jpg`, { type: 'image/jpeg' }));
+      pickFiles(...firstBatch);
+      expect(screen.getByText(/Đã chọn 20 ảnh/)).toBeInTheDocument();
+
+      pickFiles(new File(['x'], 'one-more.jpg', { type: 'image/jpeg' }));
+
+      expect(screen.getByText('Quá nhiều tệp trong một lần tải lên (tối đa 20)')).toBeInTheDocument();
+      // Still 20 — the extra file was not added.
+      expect(screen.getByText(/Đã chọn 20 ảnh/)).toBeInTheDocument();
+    });
+
     it('disables Save for DA_GIAO with a photo but no notes', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));

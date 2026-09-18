@@ -44,6 +44,7 @@ export function LightboxMediaSlide({ src, alt, downloadFilename, isVideo }: Ligh
       <video
         controls
         playsInline
+        aria-label="Video đính kèm"
         style={{ maxWidth: '100%', maxHeight: '100%' }}
         onError={() => setVideoFailed(true)}
       >

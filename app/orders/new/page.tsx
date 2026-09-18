@@ -8,7 +8,7 @@ import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
 import ImageThumb from '@/components/ImageThumb';
 import { api } from '@/lib/api';
-import { MEDIA_ACCEPT, pickValidMediaFiles } from '@/lib/media';
+import { MEDIA_ACCEPT, MAX_FILES_BULK_ORDER, MAX_FILES_WARRANTY_CLAIM, pickValidMediaFiles } from '@/lib/media';
 
 interface Customer { id: string; phone: string; name: string; address: string; type: string; notes: string }
 interface Branch { id: string; name: string }
@@ -425,7 +425,10 @@ export default function NewOrderPage() {
                             onChange={(e) => {
                               const picked = Array.from(e.target.files ?? []);
                               e.target.value = '';
-                              const { valid, error: pickError } = pickValidMediaFiles(picked);
+                              const { valid, error: pickError } = pickValidMediaFiles(picked, {
+                                maxCount: MAX_FILES_WARRANTY_CLAIM,
+                                currentCount: bhImages.length,
+                              });
                               if (pickError) setError(pickError);
                               if (valid.length > 0) setBhImages([...bhImages, ...valid]);
                             }}
@@ -475,7 +478,13 @@ export default function NewOrderPage() {
                           const picked = Array.from(e.target.files ?? []);
                           // Reset value so the same file can be picked again after removal.
                           e.target.value = '';
-                          const { valid, error: pickError } = pickValidMediaFiles(picked);
+                          // /orders/bulk-with-images caps files across ALL
+                          // products combined, not per product row.
+                          const totalPicked = products.reduce((sum, p) => sum + p.images.length, 0);
+                          const { valid, error: pickError } = pickValidMediaFiles(picked, {
+                            maxCount: MAX_FILES_BULK_ORDER,
+                            currentCount: totalPicked,
+                          });
                           if (pickError) setError(pickError);
                           if (valid.length > 0) updateProduct(idx, 'images', [...product.images, ...valid]);
                         }}

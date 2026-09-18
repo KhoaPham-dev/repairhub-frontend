@@ -4,10 +4,14 @@ import {
   MEDIA_ACCEPT,
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES,
+  MAX_FILES_ORDER_IMAGES,
+  MAX_FILES_BULK_ORDER,
+  MAX_FILES_WARRANTY_CLAIM,
   isVideoPath,
   isVideoFile,
   validateMediaFile,
   pickValidMediaFiles,
+  fileCountCapMessage,
 } from '@/lib/media';
 
 function makeFile(name: string, type: string, size: number): File {
@@ -102,6 +106,68 @@ describe('lib/media', () => {
       const { valid, error } = pickValidMediaFiles([makeFile('a.jpg', 'image/jpeg', 1024)]);
       expect(valid).toHaveLength(1);
       expect(error).toBeNull();
+    });
+
+    describe('file-count cap', () => {
+      it('accepts files up to the cap with no error', () => {
+        const files = [makeFile('a.jpg', 'image/jpeg', 1), makeFile('b.jpg', 'image/jpeg', 1)];
+        const { valid, error } = pickValidMediaFiles(files, { maxCount: 2, currentCount: 0 });
+        expect(valid).toHaveLength(2);
+        expect(error).toBeNull();
+      });
+
+      it('trims files beyond the cap and reports the cap message', () => {
+        const files = [
+          makeFile('a.jpg', 'image/jpeg', 1),
+          makeFile('b.jpg', 'image/jpeg', 1),
+          makeFile('c.jpg', 'image/jpeg', 1),
+        ];
+        const { valid, error } = pickValidMediaFiles(files, { maxCount: 2, currentCount: 0 });
+        expect(valid).toEqual([files[0], files[1]]);
+        expect(error).toBe(fileCountCapMessage(2));
+      });
+
+      it('accounts for files already selected via currentCount', () => {
+        const files = [makeFile('a.jpg', 'image/jpeg', 1), makeFile('b.jpg', 'image/jpeg', 1)];
+        const { valid, error } = pickValidMediaFiles(files, { maxCount: 3, currentCount: 2 });
+        expect(valid).toEqual([files[0]]);
+        expect(error).toBe('Quá nhiều tệp trong một lần tải lên (tối đa 3)');
+      });
+
+      it('rejects everything when already at the cap', () => {
+        const files = [makeFile('a.jpg', 'image/jpeg', 1)];
+        const { valid, error } = pickValidMediaFiles(files, { maxCount: 5, currentCount: 5 });
+        expect(valid).toEqual([]);
+        expect(error).toBe(fileCountCapMessage(5));
+      });
+
+      it('a type/size rejection message takes priority over the cap message', () => {
+        const files = [makeFile('bad.pdf', 'application/pdf', 1), makeFile('a.jpg', 'image/jpeg', 1)];
+        const { valid, error } = pickValidMediaFiles(files, { maxCount: 0, currentCount: 0 });
+        expect(valid).toEqual([]);
+        expect(error).toBe('Định dạng tệp không hợp lệ');
+      });
+
+      it('ignores the cap entirely when maxCount is not given', () => {
+        const files = Array.from({ length: 5 }, (_, i) => makeFile(`f${i}.jpg`, 'image/jpeg', 1));
+        const { valid, error } = pickValidMediaFiles(files);
+        expect(valid).toHaveLength(5);
+        expect(error).toBeNull();
+      });
+    });
+  });
+
+  describe('per-request file-count cap constants', () => {
+    it('matches the backend multer limits', () => {
+      expect(MAX_FILES_ORDER_IMAGES).toBe(20);
+      expect(MAX_FILES_BULK_ORDER).toBe(50);
+      expect(MAX_FILES_WARRANTY_CLAIM).toBe(10);
+    });
+  });
+
+  describe('fileCountCapMessage', () => {
+    it('includes the given max in the message', () => {
+      expect(fileCountCapMessage(20)).toBe('Quá nhiều tệp trong một lần tải lên (tối đa 20)');
     });
   });
 });
