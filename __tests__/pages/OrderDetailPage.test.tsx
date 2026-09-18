@@ -353,6 +353,50 @@ describe('OrderDetailPage', () => {
       expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
     });
 
+    it('treats a non-transition history row (old_status === new_status, e.g. a warranty/notes edit) as not resetting freshness', async () => {
+      // Latest genuine transition is the TIEP_NHAN creation row (old_status
+      // null). A later warranty-duration edit has old_status === new_status
+      // and must be ignored — the COMPLETION image uploaded after the
+      // transition (but before the warranty edit) still counts as fresh.
+      mockGet.mockResolvedValue({
+        data: {
+          ...MOCK_ORDER,
+          history: [
+            { id: 'h1', old_status: null, new_status: 'TIEP_NHAN', changed_by_name: 'Admin', changed_at: '2024-01-01T00:00:00Z', notes: '' },
+            { id: 'h2', old_status: 'TIEP_NHAN', new_status: 'TIEP_NHAN', changed_by_name: 'Admin', changed_at: '2024-07-01T00:00:00Z', notes: 'Cập nhật bảo hành' },
+          ],
+          images: [{ id: 'img1', image_path: 'p.jpg', image_type: 'COMPLETION', uploaded_at: '2024-06-01T00:00:00Z' }],
+        },
+      });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
+      expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
+    });
+
+    it('a newer genuine status transition makes an earlier COMPLETION image stale', async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          ...MOCK_ORDER,
+          history: [
+            { id: 'h1', old_status: null, new_status: 'TIEP_NHAN', changed_by_name: 'Admin', changed_at: '2024-01-01T00:00:00Z', notes: '' },
+            { id: 'h2', old_status: 'TIEP_NHAN', new_status: 'DANG_KIEM_TRA', changed_by_name: 'Admin', changed_at: '2024-08-01T00:00:00Z', notes: '' },
+          ],
+          images: [{ id: 'img1', image_path: 'p.jpg', image_type: 'COMPLETION', uploaded_at: '2024-06-01T00:00:00Z' }],
+        },
+      });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
+      expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
+    });
+
     it('uploads images before calling PUT /status', async () => {
       const callOrder: string[] = [];
       (global.fetch as jest.Mock).mockImplementation(async () => {

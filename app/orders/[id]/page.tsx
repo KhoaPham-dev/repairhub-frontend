@@ -30,7 +30,7 @@ interface OrderDetail {
   accessories: string; fault_description: string; quotation: number;
   warranty_period_months: number; warranty_end_date: string | null;
   created_by_name: string; created_at: string;
-  history: { id: string; old_status: string; new_status: string; changed_by_name: string; changed_at: string; notes: string }[];
+  history: { id: string; old_status: string | null; new_status: string; changed_by_name: string; changed_at: string; notes: string }[];
   images: { id: string; image_path: string; image_type: string; uploaded_at: string }[];
   source_order_history: SourceOrderHistoryEntry[] | null;
   source_order_id: string | null;
@@ -75,8 +75,16 @@ function parseMoney(s: string): number {
 // True when the order already has a COMPLETION image uploaded after its most
 // recent status change — i.e. a retry after an upload succeeded but the
 // status PUT failed would not need another image re-selected.
+//
+// Only rows that are a real status transition (old_status !== new_status,
+// with a null old_status counting as a transition — the order's creation
+// row) count toward "latest change". Rows where old_status === new_status
+// (e.g. warranty-duration edits or notes-only updates recorded via the same
+// history table) must not mark an otherwise-fresh image as stale. This
+// mirrors the BE freshness rule in PUT /orders/:id/status.
 function hasFreshCompletionImage(order: OrderDetail): boolean {
   const latestChangeAt = order.history.reduce((max, h) => {
+    if (h.old_status === h.new_status) return max;
     const t = new Date(h.changed_at).getTime();
     return Number.isFinite(t) && t > max ? t : max;
   }, 0);
