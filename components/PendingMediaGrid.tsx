@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ImageThumb from './ImageThumb';
 import ImageLightbox from './ImageLightbox';
 import { isVideoFile } from '@/lib/media';
 
 // Grid of not-yet-uploaded local File previews (photos/videos) that can be
 // tapped to open in the fullscreen lightbox, with a per-thumbnail remove
-// button. Owns the object URLs for the whole grid — memoised per File
-// identity so add/remove doesn't churn or leak blob URLs — instead of each
-// ImageThumb managing its own.
+// button. Owns the object URLs for the whole grid — instead of each
+// ImageThumb managing its own — so they can be revoked correctly.
 export default function PendingMediaGrid({
   files,
   onRemove,
@@ -21,31 +20,43 @@ export default function PendingMediaGrid({
 }) {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [urlMap, setUrlMap] = useState<Map<File, string>>(new Map());
-  // Mirrors urlMap synchronously so the unmount-cleanup effect (which must
-  // run only once, with an empty dep array) can always see the latest URLs.
-  const urlMapRef = useRef(urlMap);
 
+  // Builds one object URL per file (deduped so the same File object picked
+  // twice doesn't leak a second URL) and revokes exactly the URLs this
+  // invocation created, in its cleanup.
+  //
+  // Deliberately re-creates every URL whenever `files` changes, rather than
+  // reusing URLs across renders for files that were already present. A
+  // reuse-across-renders design needs a ref holding the "current" map so a
+  // later effect invocation can read what an earlier one created — but
+  // under React 18 StrictMode's dev-only setup -> cleanup -> setup replay,
+  // the cleanup from the *first* setup revokes URLs that the ref still
+  // points to, so the replayed setup reuses (and hands out) already-revoked
+  // URLs. Keeping URL creation and its matching revocation inside the same
+  // effect invocation with no shared mutable state sidesteps that entirely.
+  // The tradeoff — every add/remove revokes and recreates blob URLs for
+  // files that were already shown, not just the changed one — is cheap
+  // here: these arrays are at most a few dozen local Files.
   useEffect(() => {
-    const prev = urlMapRef.current;
-    const next = new Map<File, string>();
+    const map = new Map<File, string>();
     for (const file of files) {
-      next.set(file, prev.get(file) ?? URL.createObjectURL(file));
+      map.set(file, map.get(file) ?? URL.createObjectURL(file));
     }
-    // Revoke URLs for files that are no longer present (removed, or
-    // replaced by a re-pick of the same name/size).
-    prev.forEach((url, file) => {
-      if (!next.has(file)) URL.revokeObjectURL(url);
-    });
-    urlMapRef.current = next;
-    setUrlMap(next);
+    setUrlMap(map);
+    return () => {
+      map.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, [files]);
 
-  // Revoke every remaining URL on unmount.
+  // If the file the lightbox is showing no longer exists (removed, or the
+  // whole list was cleared), close it rather than silently reindexing onto
+  // a different file or leaving stale state that could reopen unexpectedly
+  // if files are picked again later.
   useEffect(() => {
-    return () => {
-      urlMapRef.current.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, []);
+    if (lightboxIndex >= files.length) {
+      setLightboxIndex(-1);
+    }
+  }, [files.length, lightboxIndex]);
 
   if (files.length === 0) return null;
 
@@ -63,7 +74,7 @@ export default function PendingMediaGrid({
         ))}
       </div>
       <ImageLightbox
-        open={lightboxIndex >= 0}
+        open={lightboxIndex >= 0 && lightboxIndex < files.length}
         index={Math.max(0, lightboxIndex)}
         onClose={() => setLightboxIndex(-1)}
         onIndexChange={(i) => setLightboxIndex(i)}

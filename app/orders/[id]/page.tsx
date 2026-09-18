@@ -290,7 +290,10 @@ export default function OrderDetailPage() {
                             src={`${API_BASE}/uploads/${img.image_path}`}
                             muted
                             preload="metadata"
-                            className="w-full h-full object-cover"
+                            // iOS Safari can swallow taps on a <video> element
+                            // itself instead of letting them reach the
+                            // wrapping button — same fix as ImageThumb.
+                            className="w-full h-full object-cover pointer-events-none"
                           />
                           <span className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                             <Play size={20} className="text-white" fill="white" />

@@ -313,6 +313,9 @@ describe('OrderDetailPage', () => {
       expect(video).toHaveAttribute('preload', 'metadata');
       expect(video.muted).toBe(true);
       expect(video.getAttribute('src')).toContain('clip.mp4');
+      // iOS Safari can swallow taps on a <video> element itself instead of
+      // letting them reach the wrapping "open viewer" button.
+      expect(video.className).toContain('pointer-events-none');
 
       const img = container.querySelector('img') as HTMLImageElement;
       expect(img).toBeInTheDocument();

@@ -4,10 +4,9 @@ import { X, Play } from 'lucide-react';
 import { isVideoFile } from '@/lib/media';
 
 // Thumbnail for a not-yet-uploaded local File (image or video). Purely
-// presentational — the object URL is created/owned by the caller (see
-// PendingMediaGrid), which lets it memoise one URL per File identity across
-// a whole grid instead of every thumbnail managing (and possibly churning)
-// its own.
+// presentational — the object URL is created/owned and revoked by the
+// caller (see PendingMediaGrid) rather than by each thumbnail managing its
+// own.
 export default function ImageThumb({
   file,
   url,
@@ -55,13 +54,10 @@ export default function ImageThumb({
       </button>
       <button
         type="button"
-        onClick={(e) => {
-          // The remove button sits inside the same relative container as
-          // the "open viewer" button above — stop the click from also
-          // triggering onOpen.
-          e.stopPropagation();
-          onRemove();
-        }}
+        // This button is a *sibling* of the "open viewer" button above (not
+        // nested inside it), so a click here never bubbles into it — no
+        // stopPropagation needed to keep it from also triggering onOpen.
+        onClick={onRemove}
         aria-label={isVideo ? 'Xoá video' : 'Xoá ảnh'}
         className="absolute top-1 right-1 w-6 h-6 rounded-full bg-overlay text-text-base flex items-center justify-center active:bg-black/80"
       >
