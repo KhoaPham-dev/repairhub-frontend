@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Upload, ChevronDown } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
@@ -53,9 +53,10 @@ const STATUS_LABELS: Record<string, string> = {
 const UPDATABLE_STATUSES = Object.keys(STATUS_LABELS).filter((s) => s !== 'DANG_BAO_HANH');
 const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
 
-// Statuses that require at least one fresh COMPLETION image before the
-// status change is accepted (mirrors the BE check in PUT /orders/:id/status).
-const IMAGE_REQUIRED_STATUSES = ['DA_GIAO', 'TRA_HANG'];
+// Statuses that require both a non-blank note and at least one fresh
+// COMPLETION image before the status change is accepted (mirrors the BE
+// checks in PUT /orders/:id/status). TRA_HANG no longer requires evidence.
+const EVIDENCE_REQUIRED_STATUSES = ['DA_GIAO', 'HUY_TRA_MAY'];
 
 const WARRANTY_MONTHS_OPTIONS = [
   { value: '3', label: '3 tháng' },
@@ -114,6 +115,10 @@ export default function OrderDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Wraps the Notes + image-upload cards so the TRA_HANG cancel shortcut can
+  // scroll evidence fields into view instead of jumping straight to the
+  // confirm modal (which would now always fail without notes/photo).
+  const evidenceSectionRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
     api.get<ApiResponse<OrderDetail>>(`/orders/${id}`).then((r) => {
@@ -142,18 +147,19 @@ export default function OrderDetailPage() {
   async function doUpdate() {
     setUpdating(true); setError(''); setSuccess('');
     try {
-      // RH: DA_GIAO / TRA_HANG require at least one fresh COMPLETION image —
-      // mirrors the BE check in PUT /orders/:id/status. Guard here (in
-      // addition to disabling the Save button) so retries via other paths
-      // (e.g. the HUY_TRA_MAY confirm modal reusing doUpdate) still fail fast
-      // with a clear message instead of round-tripping to the API.
-      if (
-        newStatus &&
-        IMAGE_REQUIRED_STATUSES.includes(newStatus) &&
-        newImages.length === 0 &&
-        !(order && hasFreshCompletionImage(order))
-      ) {
-        throw new Error('Vui lòng tải ảnh khi chuyển sang trạng thái Trả hàng / Đã giao');
+      // RH: DA_GIAO / HUY_TRA_MAY require a non-blank note and at least one
+      // fresh COMPLETION image — mirrors the BE checks in
+      // PUT /orders/:id/status. Guard here (in addition to disabling the
+      // Save button) so retries via other paths (e.g. the HUY_TRA_MAY
+      // confirm modal reusing doUpdate) still fail fast with a clear message
+      // instead of round-tripping to the API.
+      if (newStatus && EVIDENCE_REQUIRED_STATUSES.includes(newStatus)) {
+        if (!notes.trim()) {
+          throw new Error('Vui lòng nhập ghi chú khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
+        }
+        if (newImages.length === 0 && !(order && hasFreshCompletionImage(order))) {
+          throw new Error('Vui lòng tải ảnh khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
+        }
       }
 
       // Update quotation & warranty if changed
@@ -177,7 +183,7 @@ export default function OrderDetailPage() {
       }
 
       // Upload images before the status change — the BE requires a fresh
-      // COMPLETION image to already exist when it validates DA_GIAO/TRA_HANG.
+      // COMPLETION image to already exist when it validates DA_GIAO/HUY_TRA_MAY.
       if (newImages.length > 0) {
         const fd = new FormData();
         newImages.forEach((f) => fd.append('images', f));
@@ -224,11 +230,12 @@ export default function OrderDetailPage() {
     parseMoney(quotation) * 1000 !== Math.round(Number(order.quotation)) ||
     (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
 
-  // DA_GIAO / TRA_HANG require a fresh COMPLETION image — mirrors the BE
-  // validation in PUT /orders/:id/status.
-  const imageRequired = newStatus !== '' && IMAGE_REQUIRED_STATUSES.includes(newStatus);
+  // DA_GIAO / HUY_TRA_MAY require a non-blank note and a fresh COMPLETION
+  // image — mirrors the BE validation in PUT /orders/:id/status.
+  const evidenceRequired = newStatus !== '' && EVIDENCE_REQUIRED_STATUSES.includes(newStatus);
   const orderHasFreshImage = hasFreshCompletionImage(order);
-  const imageRequirementUnmet = imageRequired && newImages.length === 0 && !orderHasFreshImage;
+  const notesRequirementUnmet = evidenceRequired && notes.trim() === '';
+  const imageRequirementUnmet = evidenceRequired && newImages.length === 0 && !orderHasFreshImage;
 
   return (
     <AuthGuard>
@@ -347,72 +354,82 @@ export default function OrderDetailPage() {
                     </select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
                   </div>
-                  {imageRequired && (
+                  {evidenceRequired && (
                     <p className="text-xs text-red-400">
-                      Bắt buộc tải lên ít nhất 1 ảnh khi chuyển sang trạng thái này
+                      Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú khi chuyển sang trạng thái này
                       {orderHasFreshImage && ' (đã có ảnh mới)'}
                     </p>
                   )}
                 </div>
               </Card>
 
-              {/* TRA_HANG cancel shortcut */}
+              {/* TRA_HANG cancel shortcut — selects HUY_TRA_MAY and scrolls to
+                  the notes/photo evidence fields it now requires, instead of
+                  jumping straight to the confirm modal (which would always
+                  fail without them). Save still opens the confirm modal. */}
               {order.status === 'TRA_HANG' && (
                 <button
-                  onClick={() => { setNewStatus('HUY_TRA_MAY'); setConfirmOpen(true); }}
+                  onClick={() => {
+                    setNewStatus('HUY_TRA_MAY');
+                    evidenceSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   className="w-full border-2 border-red-500 text-red-400 py-4 rounded-full font-semibold text-base bg-transparent"
                 >
                   Huỷ trả máy
                 </button>
               )}
 
-              {/* Notes (appendable) */}
-              <Card>
-                <h3 className="font-semibold text-text-base mb-3 text-sm">Ghi chú</h3>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Thêm ghi chú..." rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted resize-none" />
-              </Card>
+              <div ref={evidenceSectionRef} className="space-y-4">
+                {/* Notes (appendable) */}
+                <Card className={notesRequirementUnmet ? 'border-red-500' : ''}>
+                  <h3 className="font-semibold text-text-base mb-3 text-sm">
+                    Ghi chú{evidenceRequired && <span className="text-red-400"> *</span>}
+                  </h3>
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Thêm ghi chú..." rows={3}
+                    className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted resize-none" />
+                </Card>
 
-              {/* Image upload (appendable) */}
-              <Card className={imageRequirementUnmet ? 'border-red-500' : ''}>
-                <h3 className="font-semibold text-text-base mb-3 text-sm">
-                  Thêm ảnh{imageRequired && <span className="text-red-400"> *</span>}
-                </h3>
-                <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
-                  <Upload size={20} className="mb-2" />
-                  <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
-                  {/* No `capture` attr — that would force camera-only on mobile.
-                      Without it, the OS picker offers Take Photo + Photo Library. */}
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
-                    onChange={(e) => {
-                      // RH-64: capture files synchronously BEFORE the value
-                      // reset — otherwise React's lazy state-updater reads
-                      // an empty FileList (because e.target.value='' clears
-                      // e.target.files) and the state never changes.
-                      const newFiles = Array.from(e.target.files ?? []);
-                      setNewImages((prev) => [...prev, ...newFiles]);
-                      e.target.value = '';
-                    }}
-                    className="hidden" />
-                </label>
-                {newImages.length > 0 && (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {newImages.map((file, i) => (
-                      <ImageThumb
-                        key={`${file.name}-${file.size}-${i}`}
-                        file={file}
-                        onRemove={() => setNewImages((prev) => prev.filter((_, j) => j !== i))}
-                      />
-                    ))}
-                  </div>
-                )}
-              </Card>
+                {/* Image upload (appendable) */}
+                <Card className={imageRequirementUnmet ? 'border-red-500' : ''}>
+                  <h3 className="font-semibold text-text-base mb-3 text-sm">
+                    Thêm ảnh{evidenceRequired && <span className="text-red-400"> *</span>}
+                  </h3>
+                  <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
+                    <Upload size={20} className="mb-2" />
+                    <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
+                    {/* No `capture` attr — that would force camera-only on mobile.
+                        Without it, the OS picker offers Take Photo + Photo Library. */}
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
+                      onChange={(e) => {
+                        // RH-64: capture files synchronously BEFORE the value
+                        // reset — otherwise React's lazy state-updater reads
+                        // an empty FileList (because e.target.value='' clears
+                        // e.target.files) and the state never changes.
+                        const newFiles = Array.from(e.target.files ?? []);
+                        setNewImages((prev) => [...prev, ...newFiles]);
+                        e.target.value = '';
+                      }}
+                      className="hidden" />
+                  </label>
+                  {newImages.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {newImages.map((file, i) => (
+                        <ImageThumb
+                          key={`${file.name}-${file.size}-${i}`}
+                          file={file}
+                          onRemove={() => setNewImages((prev) => prev.filter((_, j) => j !== i))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              </div>
 
               {/* Action */}
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}
               {success && <p className="text-green-400 text-sm text-center">{success}</p>}
-              <button onClick={handleUpdate} disabled={updating || !hasChanges || imageRequirementUnmet}
+              <button onClick={handleUpdate} disabled={updating || !hasChanges || notesRequirementUnmet || imageRequirementUnmet}
                 className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted">
                 {updating ? 'Đang cập nhật...' : 'Lưu thay đổi'}
               </button>

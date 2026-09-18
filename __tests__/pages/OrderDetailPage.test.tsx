@@ -5,6 +5,10 @@ import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 global.URL.createObjectURL = jest.fn(() => 'blob:test');
 global.URL.revokeObjectURL = jest.fn();
 
+// jsdom does not implement scrollIntoView; mock it so the TRA_HANG shortcut's
+// evidenceSectionRef.current?.scrollIntoView(...) call doesn't throw.
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
+
 // Mock next/navigation
 const mockBack = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -289,39 +293,83 @@ describe('OrderDetailPage', () => {
     expect(screen.queryByText('Cập nhật thành công')).not.toBeInTheDocument();
   });
 
-  describe('image-required statuses (DA_GIAO / TRA_HANG)', () => {
-    it('shows the required-image note when selecting DA_GIAO or TRA_HANG, not for other statuses', async () => {
-      render(<OrderDetailPage />);
-      await waitFor(() => screen.getByText('Cập nhật trạng thái'));
-      const select = screen.getByRole('combobox');
-
-      fireEvent.change(select, { target: { value: 'DANG_KIEM_TRA' } });
-      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh/)).not.toBeInTheDocument();
-
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
-      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh/)).toBeInTheDocument();
-
-      fireEvent.change(select, { target: { value: 'TRA_HANG' } });
-      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh/)).toBeInTheDocument();
-    });
-
-    it('disables Save for DA_GIAO with no images, and enables it after an image is selected', async () => {
-      render(<OrderDetailPage />);
-      await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
-
-      const saveBtn = screen.getByText('Lưu thay đổi');
-      expect(saveBtn).toBeDisabled();
-
+  describe('evidence-required statuses (DA_GIAO / HUY_TRA_MAY)', () => {
+    // Convenience helpers used across several tests below.
+    function selectStatus(value: string) {
+      fireEvent.change(screen.getByRole('combobox'), { target: { value } });
+    }
+    function fillNotes(text: string) {
+      fireEvent.change(screen.getByPlaceholderText('Thêm ghi chú...'), { target: { value: text } });
+    }
+    function attachImage() {
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
       const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
       fireEvent.change(fileInput, { target: { files: [img] } });
+    }
 
-      expect(saveBtn).not.toBeDisabled();
+    it('shows the required-evidence note when selecting DA_GIAO or HUY_TRA_MAY, not for TRA_HANG or other statuses', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Cập nhật trạng thái'));
+
+      selectStatus('DANG_KIEM_TRA');
+      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).not.toBeInTheDocument();
+
+      selectStatus('TRA_HANG');
+      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).not.toBeInTheDocument();
+
+      selectStatus('DA_GIAO');
+      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).toBeInTheDocument();
+
+      selectStatus('HUY_TRA_MAY');
+      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).toBeInTheDocument();
     });
 
-    it('enables Save for DA_GIAO when the order already has a fresh COMPLETION image', async () => {
+    it('disables Save for DA_GIAO with a photo but no notes', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      selectStatus('DA_GIAO');
+      attachImage();
+      expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
+    });
+
+    it('disables Save for DA_GIAO with notes but no photo', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
+      expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
+    });
+
+    it('enables Save for DA_GIAO once both notes and a photo are present', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
+      attachImage();
+      expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
+    });
+
+    it('TRA_HANG requires neither notes nor a photo', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      selectStatus('TRA_HANG');
+
+      const saveBtn = screen.getByText('Lưu thay đổi');
+      expect(saveBtn).not.toBeDisabled();
+      expect(screen.queryByText(/Bắt buộc tải lên/)).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      await waitFor(() => {
+        expect(mockPut).toHaveBeenCalledWith('/orders/order-123/status', expect.objectContaining({ status: 'TRA_HANG' }));
+      });
+      expect(screen.queryByText(/Vui lòng nhập ghi chú/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Vui lòng tải ảnh/)).not.toBeInTheDocument();
+    });
+
+    it('enables Save for DA_GIAO when the order already has a fresh COMPLETION image (notes still required)', async () => {
       mockGet.mockResolvedValue({
         data: {
           ...MOCK_ORDER,
@@ -330,11 +378,14 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+      selectStatus('DA_GIAO');
 
-      expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
+      // Image already fresh, but notes still blank.
+      expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
+
+      fillNotes('Đã giao máy cho khách');
+      expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
     });
 
     it('does not treat a COMPLETION image uploaded before the latest status change as fresh', async () => {
@@ -346,8 +397,8 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
 
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
@@ -370,8 +421,8 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
 
       expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
       expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
@@ -390,8 +441,8 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
 
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
@@ -410,12 +461,9 @@ describe('OrderDetailPage', () => {
 
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
-      fireEvent.change(fileInput, { target: { files: [img] } });
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
+      attachImage();
 
       const saveBtn = screen.getByText('Lưu thay đổi');
       await act(async () => {
@@ -433,12 +481,9 @@ describe('OrderDetailPage', () => {
 
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
-      fireEvent.change(fileInput, { target: { files: [img] } });
+      selectStatus('DA_GIAO');
+      fillNotes('Đã giao máy cho khách');
+      attachImage();
       expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
 
       const saveBtn = screen.getByText('Lưu thay đổi');
@@ -453,6 +498,50 @@ describe('OrderDetailPage', () => {
       // cleared right after the (successful) upload, before the PUT failed.
       expect(screen.getByText('Chọn hình ảnh')).toBeInTheDocument();
       expect(screen.queryByText('Cập nhật thành công')).not.toBeInTheDocument();
+    });
+
+    it('TRA_HANG cancel shortcut selects HUY_TRA_MAY and scrolls to evidence fields without opening the confirm modal', async () => {
+      mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, status: 'TRA_HANG' } });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByRole('button', { name: 'Huỷ trả máy' }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Huỷ trả máy' }));
+
+      const select = screen.getByRole('combobox') as HTMLSelectElement;
+      expect(select.value).toBe('HUY_TRA_MAY');
+      expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+      // Clicking the shortcut must not open the confirm modal directly —
+      // without notes/photo the PUT would always be rejected by the BE.
+      expect(screen.queryByText('Xác nhận huỷ đơn này? Hành động này không thể hoàn tác.')).not.toBeInTheDocument();
+    });
+
+    it('Save opens the confirm modal for HUY_TRA_MAY, and confirming calls PUT with the notes', async () => {
+      mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, status: 'TRA_HANG' } });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByRole('button', { name: 'Huỷ trả máy' }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Huỷ trả máy' }));
+      fillNotes('Khách không đồng ý sửa');
+      attachImage();
+
+      const saveBtn = screen.getByText('Lưu thay đổi');
+      expect(saveBtn).not.toBeDisabled();
+      fireEvent.click(saveBtn);
+
+      const confirmMessage = await screen.findByText('Xác nhận huỷ đơn này? Hành động này không thể hoàn tác.');
+      expect(confirmMessage).toBeInTheDocument();
+      expect(mockPut).not.toHaveBeenCalled();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Xác nhận'));
+      });
+
+      await waitFor(() => {
+        expect(mockPut).toHaveBeenCalledWith('/orders/order-123/status', {
+          status: 'HUY_TRA_MAY',
+          notes: 'Khách không đồng ý sửa',
+        });
+      });
     });
   });
 });
