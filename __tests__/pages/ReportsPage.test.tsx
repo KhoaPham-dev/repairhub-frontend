@@ -85,11 +85,19 @@ function relativeTime(iso: string): string {
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
+// A fixed instant the whole suite treats as "now" (via jest.setSystemTime in
+// the root beforeEach below). Report fixtures below are offset from this
+// constant rather than the real Date.now(), so relativeTime()'s output (and
+// anything else in the page that reads the clock) is 100% deterministic
+// regardless of which real-world date/time the suite happens to run at.
+const NOW_ISO = '2026-05-15T12:00:00.000Z';
+const NOW = new Date(NOW_ISO).getTime();
+
 const DONE_REPORT: RevenueReport = {
   id: 'r1',
   period_start: '2026-05-01T00:00:00.000Z',
   period_end: '2026-05-15T00:00:00.000Z',
-  generated_at: new Date(Date.now() - 2 * 3_600_000).toISOString(), // 2 hours ago
+  generated_at: new Date(NOW - 2 * 3_600_000).toISOString(), // 2 hours before NOW
   status: 'done',
 };
 
@@ -97,7 +105,7 @@ const PENDING_REPORT: RevenueReport = {
   id: 'r2',
   period_start: '2026-04-01T00:00:00.000Z',
   period_end: '2026-04-30T00:00:00.000Z',
-  generated_at: new Date(Date.now() - 30_000).toISOString(), // 30 seconds ago
+  generated_at: new Date(NOW - 30_000).toISOString(), // 30 seconds before NOW
   status: 'pending',
 };
 
@@ -105,7 +113,7 @@ const FAILED_REPORT: RevenueReport = {
   id: 'r3',
   period_start: '2026-03-01T00:00:00.000Z',
   period_end: '2026-03-31T00:00:00.000Z',
-  generated_at: new Date(Date.now() - 3 * 86_400_000).toISOString(), // 3 days ago
+  generated_at: new Date(NOW - 3 * 86_400_000).toISOString(), // 3 days before NOW
   status: 'failed',
   error: 'Something went wrong',
 };
@@ -146,6 +154,16 @@ describe('relativeTime', () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetToken.mockReturnValue('test-token');
+  // Pin the system clock so every relativeTime()/Date.now() read in this
+  // file — including inside the page component — is deterministic. Fake
+  // timers still auto-advance against real elapsed time (advanceTimers:
+  // true), so testing-library's waitFor polling keeps working normally.
+  jest.useFakeTimers({ advanceTimers: true });
+  jest.setSystemTime(new Date(NOW_ISO));
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('ReportsPage — admin guard', () => {
@@ -281,7 +299,11 @@ describe('ReportsPage — generate report', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /tạo báo cáo/i }));
 
-    await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/reports/generate'));
+    // The default period type is 'this_month', so the payload always
+    // carries { period: 'this_month' } — this assertion was missing that
+    // second argument (added when the period selector was introduced),
+    // which made the test fail on every run regardless of date.
+    await waitFor(() => expect(mockPost).toHaveBeenCalledWith('/reports/generate', { period: 'this_month' }));
   });
 
   it('prepends the new report to the top of the list on success', async () => {
