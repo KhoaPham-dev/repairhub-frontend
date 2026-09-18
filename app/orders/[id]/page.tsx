@@ -8,7 +8,7 @@ import Card from '@/components/Card';
 import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
 import ConfirmModal from '@/components/ConfirmModal';
-import ImageThumb from '@/components/ImageThumb';
+import PendingMediaGrid from '@/components/PendingMediaGrid';
 import ImageLightbox from '@/components/ImageLightbox';
 import Spinner from '@/components/Spinner';
 import { api } from '@/lib/api';
@@ -447,17 +447,10 @@ export default function OrderDetailPage() {
                       }}
                       className="hidden" />
                   </label>
-                  {newImages.length > 0 && (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      {newImages.map((file, i) => (
-                        <ImageThumb
-                          key={`${file.name}-${file.size}-${i}`}
-                          file={file}
-                          onRemove={() => setNewImages((prev) => prev.filter((_, j) => j !== i))}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <PendingMediaGrid
+                    files={newImages}
+                    onRemove={(i) => setNewImages((prev) => prev.filter((_, j) => j !== i))}
+                  />
                 </Card>
               </div>
 

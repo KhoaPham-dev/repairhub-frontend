@@ -68,12 +68,17 @@ export default function ImageLightbox({
   index,
   onClose,
   onIndexChange,
+  showDownload = true,
 }: {
   images: LightboxImage[];
   open: boolean;
   index: number;
   onClose: () => void;
   onIndexChange?: (i: number) => void;
+  // Pending (not-yet-uploaded) previews have nothing meaningful to download
+  // yet — their "src" is a local blob: URL, not a saved file — so callers
+  // pass false to leave the Download button out entirely.
+  showDownload?: boolean;
 }) {
   const slides: LightboxSlide[] = images.map((img) => ({
     src: img.src,
@@ -92,7 +97,7 @@ export default function ImageLightbox({
       index={index}
       slides={slides}
       on={{ view: ({ index: i }) => onIndexChange?.(i) }}
-      plugins={[Zoom, Download, Counter]}
+      plugins={showDownload ? [Zoom, Download, Counter] : [Zoom, Counter]}
       // Tune zoom: comfortable defaults for mobile pinch + desktop scroll.
       zoom={{
         maxZoomPixelRatio: 4,

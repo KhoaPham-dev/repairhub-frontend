@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { MEDIA_ACCEPT } from '@/lib/media';
 
-// jsdom does not implement URL.createObjectURL; mock it so ImageThumb renders without crashing
+// jsdom does not implement URL.createObjectURL; mock it so PendingMediaGrid/ImageThumb render without crashing
 global.URL.createObjectURL = jest.fn(() => 'blob:test');
 global.URL.revokeObjectURL = jest.fn();
 
@@ -320,6 +320,21 @@ describe('OrderDetailPage', () => {
 
       expect(screen.getByLabelText('Mở video đầy đủ')).toBeInTheDocument();
       expect(screen.getByLabelText('Mở ảnh đầy đủ')).toBeInTheDocument();
+    });
+
+    it('a picked-but-not-yet-uploaded photo renders as a tappable PendingMediaGrid thumbnail', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
+      fireEvent.change(fileInput, { target: { files: [img] } });
+
+      const openBtn = await screen.findByLabelText('Xem ảnh');
+      expect(openBtn).toBeInTheDocument();
+      // Tapping the ✕ removes it and clears the picked-count label.
+      fireEvent.click(screen.getByLabelText('Xoá ảnh'));
+      expect(screen.queryByLabelText('Xem ảnh')).not.toBeInTheDocument();
     });
   });
 

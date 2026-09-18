@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MEDIA_ACCEPT } from '@/lib/media';
 
-// jsdom does not implement URL.createObjectURL; mock it so ImageThumb renders without crashing
+// jsdom does not implement URL.createObjectURL; mock it so PendingMediaGrid/ImageThumb render without crashing
 global.URL.createObjectURL = jest.fn(() => 'blob:test');
 global.URL.revokeObjectURL = jest.fn();
 
@@ -452,6 +452,8 @@ describe('NewOrderPage', () => {
 
     expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
     expect(screen.queryByText('Định dạng tệp không hợp lệ')).not.toBeInTheDocument();
+    // The picked video renders as a tappable PendingMediaGrid thumbnail.
+    expect(await screen.findByLabelText('Xem video')).toBeInTheDocument();
   });
 
   it('product image picker rejects an unsupported file type with a visible error', async () => {

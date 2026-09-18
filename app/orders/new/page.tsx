@@ -6,7 +6,7 @@ import { Plus, Upload, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import AuthGuard from '@/components/AuthGuard';
 import SegmentedControl from '@/components/SegmentedControl';
-import ImageThumb from '@/components/ImageThumb';
+import PendingMediaGrid from '@/components/PendingMediaGrid';
 import { api } from '@/lib/api';
 import { MEDIA_ACCEPT, MAX_FILES_BULK_ORDER, MAX_FILES_WARRANTY_CLAIM, pickValidMediaFiles } from '@/lib/media';
 
@@ -435,17 +435,10 @@ export default function NewOrderPage() {
                             className="hidden"
                           />
                         </label>
-                        {bhImages.length > 0 && (
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {bhImages.map((file, imgIdx) => (
-                              <ImageThumb
-                                key={`${file.name}-${file.size}-${imgIdx}`}
-                                file={file}
-                                onRemove={() => setBhImages(bhImages.filter((_, i) => i !== imgIdx))}
-                              />
-                            ))}
-                          </div>
-                        )}
+                        <PendingMediaGrid
+                          files={bhImages}
+                          onRemove={(i) => setBhImages(bhImages.filter((_, j) => j !== i))}
+                        />
                       </div>
                     </>
                   )}
@@ -490,17 +483,10 @@ export default function NewOrderPage() {
                         }}
                         className="hidden" />
                     </label>
-                    {product.images.length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {product.images.map((file, imgIdx) => (
-                          <ImageThumb
-                            key={`${file.name}-${file.size}-${imgIdx}`}
-                            file={file}
-                            onRemove={() => updateProduct(idx, 'images', product.images.filter((_, i) => i !== imgIdx))}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <PendingMediaGrid
+                      files={product.images}
+                      onRemove={(i) => updateProduct(idx, 'images', product.images.filter((_, j) => j !== i))}
+                    />
                   </div>
                 </>
               )}
