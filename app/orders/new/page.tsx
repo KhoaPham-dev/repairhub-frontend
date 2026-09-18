@@ -414,10 +414,10 @@ export default function NewOrderPage() {
                       />
 
                       <div>
-                        <p className="text-xs text-text-muted mb-2">Ảnh tiếp nhận</p>
+                        <p className="text-xs text-text-muted mb-2">Ảnh / video tiếp nhận</p>
                         <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
                           <Upload size={20} className="mb-2" />
-                          <span className="text-sm font-medium">{bhImages.length > 0 ? `Đã chọn ${bhImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
+                          <span className="text-sm font-medium">{bhImages.length > 0 ? `Đã chọn ${bhImages.length} ảnh/video — chạm để thêm` : 'Chọn ảnh / video'}</span>
                           <input
                             type="file"
                             accept={MEDIA_ACCEPT}
@@ -464,10 +464,10 @@ export default function NewOrderPage() {
 
                   {/* Images */}
                   <div>
-                    <p className="text-xs text-text-muted mb-2">Ảnh tiếp nhận</p>
+                    <p className="text-xs text-text-muted mb-2">Ảnh / video tiếp nhận</p>
                     <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
                       <Upload size={20} className="mb-2" />
-                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
+                      <span className="text-sm font-medium">{product.images.length > 0 ? `Đã chọn ${product.images.length} ảnh/video — chạm để thêm` : 'Chọn ảnh / video'}</span>
                       {/* No `capture` attr — that would force camera-only on mobile.
                           Without it, the OS picker offers Take Photo + Photo Library. */}
                       <input type="file" accept={MEDIA_ACCEPT} multiple
