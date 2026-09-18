@@ -31,7 +31,7 @@ interface OrderDetail {
   warranty_period_months: number; warranty_end_date: string | null;
   created_by_name: string; created_at: string;
   history: { id: string; old_status: string; new_status: string; changed_by_name: string; changed_at: string; notes: string }[];
-  images: { id: string; image_path: string; image_type: string }[];
+  images: { id: string; image_path: string; image_type: string; uploaded_at: string }[];
   source_order_history: SourceOrderHistoryEntry[] | null;
   source_order_id: string | null;
 }
@@ -53,6 +53,10 @@ const STATUS_LABELS: Record<string, string> = {
 const UPDATABLE_STATUSES = Object.keys(STATUS_LABELS).filter((s) => s !== 'DANG_BAO_HANH');
 const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
 
+// Statuses that require at least one fresh COMPLETION image before the
+// status change is accepted (mirrors the BE check in PUT /orders/:id/status).
+const IMAGE_REQUIRED_STATUSES = ['DA_GIAO', 'TRA_HANG'];
+
 const WARRANTY_MONTHS_OPTIONS = [
   { value: '3', label: '3 tháng' },
   { value: '6', label: '6 tháng' },
@@ -66,6 +70,21 @@ function formatMoney(n: number): string {
 
 function parseMoney(s: string): number {
   return parseInt(s.replace(/\D/g, ''), 10) || 0;
+}
+
+// True when the order already has a COMPLETION image uploaded after its most
+// recent status change — i.e. a retry after an upload succeeded but the
+// status PUT failed would not need another image re-selected.
+function hasFreshCompletionImage(order: OrderDetail): boolean {
+  const latestChangeAt = order.history.reduce((max, h) => {
+    const t = new Date(h.changed_at).getTime();
+    return Number.isFinite(t) && t > max ? t : max;
+  }, 0);
+  return order.images.some((img) => {
+    if (img.image_type !== 'COMPLETION') return false;
+    const uploadedAt = new Date(img.uploaded_at).getTime();
+    return Number.isFinite(uploadedAt) && uploadedAt > latestChangeAt;
+  });
 }
 
 export default function OrderDetailPage() {
@@ -115,6 +134,20 @@ export default function OrderDetailPage() {
   async function doUpdate() {
     setUpdating(true); setError(''); setSuccess('');
     try {
+      // RH: DA_GIAO / TRA_HANG require at least one fresh COMPLETION image —
+      // mirrors the BE check in PUT /orders/:id/status. Guard here (in
+      // addition to disabling the Save button) so retries via other paths
+      // (e.g. the HUY_TRA_MAY confirm modal reusing doUpdate) still fail fast
+      // with a clear message instead of round-tripping to the API.
+      if (
+        newStatus &&
+        IMAGE_REQUIRED_STATUSES.includes(newStatus) &&
+        newImages.length === 0 &&
+        !(order && hasFreshCompletionImage(order))
+      ) {
+        throw new Error('Vui lòng tải ảnh khi chuyển sang trạng thái Trả hàng / Đã giao');
+      }
+
       // Update quotation & warranty if changed
       const patchData: Record<string, unknown> = {};
       const newQuotation = parseMoney(quotation) * 1000;
@@ -135,12 +168,8 @@ export default function OrderDetailPage() {
         await api.patch(`/orders/${id}`, patchData);
       }
 
-      // Update status if selected
-      if (newStatus) {
-        await api.put(`/orders/${id}/status`, { status: newStatus, notes: notes.trim() || undefined });
-      }
-
-      // Upload images
+      // Upload images before the status change — the BE requires a fresh
+      // COMPLETION image to already exist when it validates DA_GIAO/TRA_HANG.
       if (newImages.length > 0) {
         const fd = new FormData();
         newImages.forEach((f) => fd.append('images', f));
@@ -155,14 +184,25 @@ export default function OrderDetailPage() {
           const b = await r.json().catch(() => ({}));
           throw new Error((b as { error?: string })?.error || 'Tải ảnh thất bại');
         }
+        // Clear immediately on success so a failure in the status call below
+        // doesn't re-upload the same images as duplicates on retry.
+        setNewImages([]);
       }
 
-      setNewStatus(''); setNotes(''); setNewImages([]);
+      // Update status if selected
+      if (newStatus) {
+        await api.put(`/orders/${id}/status`, { status: newStatus, notes: notes.trim() || undefined });
+      }
+
+      setNewStatus(''); setNotes('');
       setSuccess('Cập nhật thành công');
       load();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      // Reload so hasFreshCompletionImage reflects any image that was
+      // uploaded successfully before a later step in this request failed.
+      load();
     } finally {
       setUpdating(false);
     }
@@ -175,6 +215,12 @@ export default function OrderDetailPage() {
   const hasChanges = !!(newStatus || notes.trim() || newImages.length > 0 ||
     parseMoney(quotation) * 1000 !== Math.round(Number(order.quotation)) ||
     (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
+
+  // DA_GIAO / TRA_HANG require a fresh COMPLETION image — mirrors the BE
+  // validation in PUT /orders/:id/status.
+  const imageRequired = newStatus !== '' && IMAGE_REQUIRED_STATUSES.includes(newStatus);
+  const orderHasFreshImage = hasFreshCompletionImage(order);
+  const imageRequirementUnmet = imageRequired && newImages.length === 0 && !orderHasFreshImage;
 
   return (
     <AuthGuard>
@@ -293,6 +339,12 @@ export default function OrderDetailPage() {
                     </select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
                   </div>
+                  {imageRequired && (
+                    <p className="text-xs text-red-400">
+                      Bắt buộc tải lên ít nhất 1 ảnh khi chuyển sang trạng thái này
+                      {orderHasFreshImage && ' (đã có ảnh mới)'}
+                    </p>
+                  )}
                 </div>
               </Card>
 
@@ -315,8 +367,10 @@ export default function OrderDetailPage() {
               </Card>
 
               {/* Image upload (appendable) */}
-              <Card>
-                <h3 className="font-semibold text-text-base mb-3 text-sm">Thêm ảnh</h3>
+              <Card className={imageRequirementUnmet ? 'border-red-500' : ''}>
+                <h3 className="font-semibold text-text-base mb-3 text-sm">
+                  Thêm ảnh{imageRequired && <span className="text-red-400"> *</span>}
+                </h3>
                 <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
                   <Upload size={20} className="mb-2" />
                   <span className="text-sm font-medium">{newImages.length > 0 ? `Đã chọn ${newImages.length} ảnh — chạm để thêm` : 'Chọn hình ảnh'}</span>
@@ -350,7 +404,7 @@ export default function OrderDetailPage() {
               {/* Action */}
               {error && <p className="text-red-500 text-sm text-center">{error}</p>}
               {success && <p className="text-green-400 text-sm text-center">{success}</p>}
-              <button onClick={handleUpdate} disabled={updating || !hasChanges}
+              <button onClick={handleUpdate} disabled={updating || !hasChanges || imageRequirementUnmet}
                 className="w-full bg-accent text-[#0B0B0B] py-4 rounded-full font-semibold text-base disabled:bg-surface disabled:text-text-muted">
                 {updating ? 'Đang cập nhật...' : 'Lưu thay đổi'}
               </button>

@@ -288,4 +288,127 @@ describe('OrderDetailPage', () => {
     // Success toast must NOT appear
     expect(screen.queryByText('Cập nhật thành công')).not.toBeInTheDocument();
   });
+
+  describe('image-required statuses (DA_GIAO / TRA_HANG)', () => {
+    it('shows the required-image note when selecting DA_GIAO or TRA_HANG, not for other statuses', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Cập nhật trạng thái'));
+      const select = screen.getByRole('combobox');
+
+      fireEvent.change(select, { target: { value: 'DANG_KIEM_TRA' } });
+      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh/)).not.toBeInTheDocument();
+
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh/)).toBeInTheDocument();
+
+      fireEvent.change(select, { target: { value: 'TRA_HANG' } });
+      expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh/)).toBeInTheDocument();
+    });
+
+    it('disables Save for DA_GIAO with no images, and enables it after an image is selected', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      const saveBtn = screen.getByText('Lưu thay đổi');
+      expect(saveBtn).toBeDisabled();
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
+      fireEvent.change(fileInput, { target: { files: [img] } });
+
+      expect(saveBtn).not.toBeDisabled();
+    });
+
+    it('enables Save for DA_GIAO when the order already has a fresh COMPLETION image', async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          ...MOCK_ORDER,
+          images: [{ id: 'img1', image_path: 'p.jpg', image_type: 'COMPLETION', uploaded_at: '2024-06-01T00:00:00Z' }],
+        },
+      });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
+      expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
+    });
+
+    it('does not treat a COMPLETION image uploaded before the latest status change as fresh', async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          ...MOCK_ORDER,
+          images: [{ id: 'img1', image_path: 'p.jpg', image_type: 'COMPLETION', uploaded_at: '2023-12-01T00:00:00Z' }],
+        },
+      });
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
+      expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
+    });
+
+    it('uploads images before calling PUT /status', async () => {
+      const callOrder: string[] = [];
+      (global.fetch as jest.Mock).mockImplementation(async () => {
+        callOrder.push('upload');
+        return { ok: true, json: async () => ({}) };
+      });
+      mockPut.mockImplementation(async () => {
+        callOrder.push('status');
+        return {};
+      });
+
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
+      fireEvent.change(fileInput, { target: { files: [img] } });
+
+      const saveBtn = screen.getByText('Lưu thay đổi');
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      await waitFor(() => {
+        expect(mockPut).toHaveBeenCalledWith('/orders/order-123/status', expect.objectContaining({ status: 'DA_GIAO' }));
+      });
+      expect(callOrder).toEqual(['upload', 'status']);
+    });
+
+    it('clears newImages after a successful upload even when the following status PUT fails, and shows the error', async () => {
+      mockPut.mockRejectedValue(new Error('Cập nhật trạng thái thất bại'));
+
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'DA_GIAO' } });
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const img = new File(['x'], 'completion.jpg', { type: 'image/jpeg' });
+      fireEvent.change(fileInput, { target: { files: [img] } });
+      expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
+
+      const saveBtn = screen.getByText('Lưu thay đổi');
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Cập nhật trạng thái thất bại')).toBeInTheDocument();
+      });
+      // The image picker is back to its empty-state label — newImages was
+      // cleared right after the (successful) upload, before the PUT failed.
+      expect(screen.getByText('Chọn hình ảnh')).toBeInTheDocument();
+      expect(screen.queryByText('Cập nhật thành công')).not.toBeInTheDocument();
+    });
+  });
 });
