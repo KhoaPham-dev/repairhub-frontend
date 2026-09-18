@@ -322,6 +322,7 @@ function OrdersPageInner() {
           {orders.map((order) => (
             <div
               key={order.id}
+              data-testid="order-card"
               onClick={() => {
                 // Snapshot scroll position and loaded page count before navigating.
                 // Only when settled: mid-load `loadedPages` is optimistic (the page

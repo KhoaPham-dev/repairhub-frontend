@@ -246,7 +246,7 @@ export default function OrderDetailPage() {
           {/* Locked order info */}
           <Card>
             <div className="flex justify-between items-start mb-3">
-              <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-full">
+              <span data-testid="order-status-badge" className="text-xs bg-accent/10 text-accent px-2 py-1 rounded-full">
                 {STATUS_LABELS[order.status] ?? order.status}
               </span>
               <span className="text-xs text-text-muted">{new Date(order.created_at).toLocaleDateString('vi-VN')}</span>
