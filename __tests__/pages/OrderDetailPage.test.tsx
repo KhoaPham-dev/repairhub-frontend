@@ -324,6 +324,27 @@ describe('OrderDetailPage', () => {
       expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh và nhập ghi chú/)).toBeInTheDocument();
     });
 
+    it('toggles aria-required on the notes textarea and file input when DA_GIAO is selected', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Cập nhật trạng thái'));
+
+      const notesInput = screen.getByPlaceholderText('Thêm ghi chú...');
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+      expect(notesInput).toHaveAttribute('aria-required', 'false');
+      expect(fileInput).toHaveAttribute('aria-required', 'false');
+
+      selectStatus('DA_GIAO');
+
+      expect(notesInput).toHaveAttribute('aria-required', 'true');
+      expect(fileInput).toHaveAttribute('aria-required', 'true');
+
+      selectStatus('DANG_KIEM_TRA');
+
+      expect(notesInput).toHaveAttribute('aria-required', 'false');
+      expect(fileInput).toHaveAttribute('aria-required', 'false');
+    });
+
     it('disables Save for DA_GIAO with a photo but no notes', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));

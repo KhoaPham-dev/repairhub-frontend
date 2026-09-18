@@ -382,18 +382,26 @@ export default function OrderDetailPage() {
               <div ref={evidenceSectionRef} className="space-y-4">
                 {/* Notes (appendable) */}
                 <Card className={notesRequirementUnmet ? 'border-red-500' : ''}>
-                  <h3 className="font-semibold text-text-base mb-3 text-sm">
-                    Ghi chú{evidenceRequired && <span className="text-red-400"> *</span>}
+                  <h3 id="ghi-chu-heading" className="font-semibold text-text-base mb-3 text-sm">
+                    Ghi chú{evidenceRequired && (
+                      <span className="text-red-400" aria-hidden="true"> *</span>
+                    )}
+                    {evidenceRequired && <span className="sr-only"> (bắt buộc)</span>}
                   </h3>
                   <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                     placeholder="Thêm ghi chú..." rows={3}
+                    aria-required={evidenceRequired}
+                    aria-labelledby="ghi-chu-heading"
                     className="w-full px-4 py-3 rounded-xl border border-border-subtle bg-surface-alt text-text-base text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent caret-accent placeholder:text-text-muted resize-none" />
                 </Card>
 
                 {/* Image upload (appendable) */}
                 <Card className={imageRequirementUnmet ? 'border-red-500' : ''}>
-                  <h3 className="font-semibold text-text-base mb-3 text-sm">
-                    Thêm ảnh{evidenceRequired && <span className="text-red-400"> *</span>}
+                  <h3 id="them-anh-heading" className="font-semibold text-text-base mb-3 text-sm">
+                    Thêm ảnh{evidenceRequired && (
+                      <span className="text-red-400" aria-hidden="true"> *</span>
+                    )}
+                    {evidenceRequired && <span className="sr-only"> (bắt buộc)</span>}
                   </h3>
                   <label className="w-full py-4 border-2 border-dashed border-border-subtle rounded-2xl flex flex-col items-center justify-center text-text-muted bg-surface-alt cursor-pointer active:bg-surface transition-colors">
                     <Upload size={20} className="mb-2" />
@@ -401,6 +409,8 @@ export default function OrderDetailPage() {
                     {/* No `capture` attr — that would force camera-only on mobile.
                         Without it, the OS picker offers Take Photo + Photo Library. */}
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple
+                      aria-required={evidenceRequired}
+                      aria-labelledby="them-anh-heading"
                       onChange={(e) => {
                         // RH-64: capture files synchronously BEFORE the value
                         // reset — otherwise React's lazy state-updater reads
