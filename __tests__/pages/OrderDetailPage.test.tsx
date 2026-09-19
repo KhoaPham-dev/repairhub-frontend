@@ -341,7 +341,7 @@ describe('OrderDetailPage', () => {
     });
   });
 
-  describe('evidence-required statuses (DA_GIAO / HUY_TRA_MAY)', () => {
+  describe('evidence-required statuses (SUA_XONG / HUY_TRA_MAY)', () => {
     // Convenience helpers used across several tests below.
     function selectStatus(value: string) {
       fireEvent.change(screen.getByRole('combobox'), { target: { value } });
@@ -364,7 +364,7 @@ describe('OrderDetailPage', () => {
       return file;
     }
 
-    it('shows the required-evidence note when selecting DA_GIAO or HUY_TRA_MAY, not for TRA_HANG or other statuses', async () => {
+    it('shows the required-evidence note when selecting SUA_XONG or HUY_TRA_MAY, not for DA_GIAO or TRA_HANG', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Cập nhật trạng thái'));
 
@@ -375,13 +375,16 @@ describe('OrderDetailPage', () => {
       expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).not.toBeInTheDocument();
 
       selectStatus('DA_GIAO');
+      expect(screen.queryByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).not.toBeInTheDocument();
+
+      selectStatus('SUA_XONG');
       expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).toBeInTheDocument();
 
       selectStatus('HUY_TRA_MAY');
       expect(screen.getByText(/Bắt buộc tải lên ít nhất 1 ảnh hoặc video và nhập ghi chú/)).toBeInTheDocument();
     });
 
-    it('toggles aria-required on the notes textarea and file input when DA_GIAO is selected', async () => {
+    it('toggles aria-required on the notes textarea and file input when SUA_XONG is selected', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Cập nhật trạng thái'));
 
@@ -391,7 +394,7 @@ describe('OrderDetailPage', () => {
       expect(notesInput).toHaveAttribute('aria-required', 'false');
       expect(fileInput).toHaveAttribute('aria-required', 'false');
 
-      selectStatus('DA_GIAO');
+      selectStatus('SUA_XONG');
 
       expect(notesInput).toHaveAttribute('aria-required', 'true');
       expect(fileInput).toHaveAttribute('aria-required', 'true');
@@ -473,29 +476,49 @@ describe('OrderDetailPage', () => {
       expect(screen.getByText(/Đã chọn 20 ảnh/)).toBeInTheDocument();
     });
 
-    it('disables Save for DA_GIAO with a photo but no notes', async () => {
+    it('disables Save for SUA_XONG with a photo but no notes', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
+      selectStatus('SUA_XONG');
       attachImage();
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
     });
 
-    it('disables Save for DA_GIAO with notes but no photo', async () => {
+    it('disables Save for SUA_XONG with notes but no photo', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
     });
 
-    it('enables Save for DA_GIAO once both notes and a photo are present', async () => {
+    it('enables Save for SUA_XONG once both notes and a photo are present', async () => {
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
       attachImage();
       expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
+    });
+
+    it('DA_GIAO requires neither notes nor a photo, and saves with status DA_GIAO', async () => {
+      render(<OrderDetailPage />);
+      await waitFor(() => screen.getByText('Lưu thay đổi'));
+      selectStatus('DA_GIAO');
+
+      const saveBtn = screen.getByText('Lưu thay đổi');
+      expect(saveBtn).not.toBeDisabled();
+      expect(screen.queryByText(/Bắt buộc tải lên/)).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      await waitFor(() => {
+        expect(mockPut).toHaveBeenCalledWith('/orders/order-123/status', expect.objectContaining({ status: 'DA_GIAO' }));
+      });
+      expect(screen.queryByText(/Vui lòng nhập ghi chú/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Vui lòng tải ảnh/)).not.toBeInTheDocument();
     });
 
     it('TRA_HANG requires neither notes nor a photo', async () => {
@@ -518,7 +541,7 @@ describe('OrderDetailPage', () => {
       expect(screen.queryByText(/Vui lòng tải ảnh/)).not.toBeInTheDocument();
     });
 
-    it('enables Save for DA_GIAO when the order already has a fresh COMPLETION image (notes still required)', async () => {
+    it('enables Save for SUA_XONG when the order already has a fresh COMPLETION image (notes still required)', async () => {
       mockGet.mockResolvedValue({
         data: {
           ...MOCK_ORDER,
@@ -527,17 +550,17 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
+      selectStatus('SUA_XONG');
 
       // Image already fresh, but notes still blank.
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
 
-      fillNotes('Đã giao máy cho khách');
+      fillNotes('Đã sửa xong loa');
       expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
     });
 
-    it('enables Save for DA_GIAO when the order already has a fresh COMPLETION video', async () => {
+    it('enables Save for SUA_XONG when the order already has a fresh COMPLETION video', async () => {
       mockGet.mockResolvedValue({
         data: {
           ...MOCK_ORDER,
@@ -546,12 +569,12 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
+      selectStatus('SUA_XONG');
 
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
 
-      fillNotes('Đã giao máy cho khách');
+      fillNotes('Đã sửa xong loa');
       expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
     });
 
@@ -564,8 +587,8 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
 
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
@@ -588,8 +611,8 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
 
       expect(screen.getByText('Lưu thay đổi')).not.toBeDisabled();
       expect(screen.getByText(/đã có ảnh mới/)).toBeInTheDocument();
@@ -608,8 +631,8 @@ describe('OrderDetailPage', () => {
       });
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
 
       expect(screen.getByText('Lưu thay đổi')).toBeDisabled();
       expect(screen.queryByText(/đã có ảnh mới/)).not.toBeInTheDocument();
@@ -628,8 +651,8 @@ describe('OrderDetailPage', () => {
 
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
       attachImage();
 
       const saveBtn = screen.getByText('Lưu thay đổi');
@@ -638,7 +661,7 @@ describe('OrderDetailPage', () => {
       });
 
       await waitFor(() => {
-        expect(mockPut).toHaveBeenCalledWith('/orders/order-123/status', expect.objectContaining({ status: 'DA_GIAO' }));
+        expect(mockPut).toHaveBeenCalledWith('/orders/order-123/status', expect.objectContaining({ status: 'SUA_XONG' }));
       });
       expect(callOrder).toEqual(['upload', 'status']);
     });
@@ -648,8 +671,8 @@ describe('OrderDetailPage', () => {
 
       render(<OrderDetailPage />);
       await waitFor(() => screen.getByText('Lưu thay đổi'));
-      selectStatus('DA_GIAO');
-      fillNotes('Đã giao máy cho khách');
+      selectStatus('SUA_XONG');
+      fillNotes('Đã sửa xong loa');
       attachImage();
       expect(screen.getByText(/Đã chọn 1 ảnh/)).toBeInTheDocument();
 

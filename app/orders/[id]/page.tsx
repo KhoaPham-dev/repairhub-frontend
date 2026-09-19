@@ -56,8 +56,9 @@ const TERMINAL = ['DA_GIAO', 'HUY_TRA_MAY'];
 
 // Statuses that require both a non-blank note and at least one fresh
 // COMPLETION image before the status change is accepted (mirrors the BE
-// checks in PUT /orders/:id/status). TRA_HANG no longer requires evidence.
-const EVIDENCE_REQUIRED_STATUSES = ['DA_GIAO', 'HUY_TRA_MAY'];
+// checks in PUT /orders/:id/status). DA_GIAO requires nothing; TRA_HANG
+// does not require evidence either.
+const EVIDENCE_REQUIRED_STATUSES = ['SUA_XONG', 'HUY_TRA_MAY'];
 
 const WARRANTY_MONTHS_OPTIONS = [
   { value: '3', label: '3 tháng' },
@@ -149,7 +150,7 @@ export default function OrderDetailPage() {
   async function doUpdate() {
     setUpdating(true); setError(''); setSuccess('');
     try {
-      // RH: DA_GIAO / HUY_TRA_MAY require a non-blank note and at least one
+      // RH: SUA_XONG / HUY_TRA_MAY require a non-blank note and at least one
       // fresh COMPLETION image — mirrors the BE checks in
       // PUT /orders/:id/status. Guard here (in addition to disabling the
       // Save button) so retries via other paths (e.g. the HUY_TRA_MAY
@@ -157,10 +158,10 @@ export default function OrderDetailPage() {
       // instead of round-tripping to the API.
       if (newStatus && EVIDENCE_REQUIRED_STATUSES.includes(newStatus)) {
         if (!notes.trim()) {
-          throw new Error('Vui lòng nhập ghi chú khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
+          throw new Error('Vui lòng nhập ghi chú khi chuyển sang trạng thái Sửa xong / Huỷ trả máy');
         }
         if (newImages.length === 0 && !(order && hasFreshCompletionImage(order))) {
-          throw new Error('Vui lòng tải ảnh hoặc video khi chuyển sang trạng thái Đã giao / Huỷ trả máy');
+          throw new Error('Vui lòng tải ảnh hoặc video khi chuyển sang trạng thái Sửa xong / Huỷ trả máy');
         }
       }
 
@@ -185,7 +186,7 @@ export default function OrderDetailPage() {
       }
 
       // Upload images before the status change — the BE requires a fresh
-      // COMPLETION image to already exist when it validates DA_GIAO/HUY_TRA_MAY.
+      // COMPLETION image to already exist when it validates SUA_XONG/HUY_TRA_MAY.
       if (newImages.length > 0) {
         const fd = new FormData();
         newImages.forEach((f) => fd.append('images', f));
@@ -232,7 +233,7 @@ export default function OrderDetailPage() {
     parseMoney(quotation) * 1000 !== Math.round(Number(order.quotation)) ||
     (warrantyOption === 'custom' ? Number(customMonths) || 0 : Number(warrantyOption) || 0) !== Number(order.warranty_period_months));
 
-  // DA_GIAO / HUY_TRA_MAY require a non-blank note and a fresh COMPLETION
+  // SUA_XONG / HUY_TRA_MAY require a non-blank note and a fresh COMPLETION
   // image — mirrors the BE validation in PUT /orders/:id/status.
   const evidenceRequired = newStatus !== '' && EVIDENCE_REQUIRED_STATUSES.includes(newStatus);
   const orderHasFreshImage = hasFreshCompletionImage(order);
