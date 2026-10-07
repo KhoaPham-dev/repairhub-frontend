@@ -26,6 +26,7 @@ function resetWindowScroll(force: boolean) {
 // reset the window offset (never <main>) once no editable element has focus.
 export default function KeyboardScrollReset() {
   useEffect(() => {
+    const vv = window.visualViewport;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let pendingForce = false;
     const schedule = (force = false) => {
@@ -33,7 +34,8 @@ export default function KeyboardScrollReset() {
       pendingForce = pendingForce || force;
       timer = setTimeout(() => {
         timer = undefined;
-        const f = pendingForce;
+        // Honor force only if the viewport is still at full height.
+        const f = pendingForce && !!vv && vv.height >= window.innerHeight - 1;
         pendingForce = false;
         resetWindowScroll(f);
       }, 100);
@@ -42,12 +44,13 @@ export default function KeyboardScrollReset() {
 
     document.addEventListener('focusout', onFocusOut, true);
 
-    const vv = window.visualViewport;
     let lastHeight = vv?.height ?? 0;
     const onResize = () => {
       if (!vv) return;
       const grew = vv.height > lastHeight;
+      const shrank = vv.height < lastHeight;
       lastHeight = vv.height;
+      if (shrank) pendingForce = false;
       // Confirmed keyboard close: viewport is back to full height (1px
       // tolerance for iOS rounding). Reset even if a field still has focus.
       // Partial growth (e.g. QuickType bar) keeps the focus guard.

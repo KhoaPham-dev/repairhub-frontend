@@ -129,6 +129,21 @@ describe('KeyboardScrollReset', () => {
     expect(main.scrollTop).toBe(250);
   });
 
+  it('does not reset when the keyboard reopens within the debounce after a full-height resize', () => {
+    const { vv, listeners } = mockVV(window.innerHeight);
+    const { input } = mount();
+    input.focus();
+    setScrollY(300);
+    const full = window.innerHeight;
+    act(() => {
+      vv.height = 400; listeners.resize();
+      vv.height = full; listeners.resize();
+      vv.height = 400; listeners.resize();
+      jest.advanceTimersByTime(150);
+    });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it('removes listeners and pending timers on unmount', () => {
     const vv: VV = { height: 400, addEventListener: jest.fn(), removeEventListener: jest.fn() };
     Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
