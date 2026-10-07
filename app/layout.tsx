@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import BottomNav from '@/components/BottomNav';
 import PageTransition from '@/components/PageTransition';
+import KeyboardScrollReset from '@/components/KeyboardScrollReset';
 
 export const metadata: Metadata = {
   title: 'RepairHub',
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className="h-dvh overflow-hidden">
+        <KeyboardScrollReset />
         <div className="max-w-md mx-auto bg-bg h-dvh shadow-xl relative flex flex-col">
           <main className="flex-1 overflow-y-auto bg-bg">
             <PageTransition>{children}</PageTransition>
