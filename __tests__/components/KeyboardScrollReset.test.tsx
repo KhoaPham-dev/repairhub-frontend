@@ -88,20 +88,45 @@ describe('KeyboardScrollReset', () => {
     expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
-  it('does not reset on viewport growth while an editable element is focused', () => {
+  function mockVV(height: number) {
     const listeners: Record<string, () => void> = {};
     const vv: VV = {
-      height: 400,
+      height,
       addEventListener: jest.fn((e: string, cb: () => void) => { listeners[e] = cb; }),
       removeEventListener: jest.fn(),
     };
     Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+    return { vv, listeners };
+  }
+
+  it('does not reset on partial viewport growth (below full height) while a field is focused', () => {
+    const { vv, listeners } = mockVV(400);
     const { input } = mount();
     input.focus();
     setScrollY(300);
-    vv.height = 700;
+    vv.height = window.innerHeight - 50; // e.g. QuickType bar change, keyboard still open
     act(() => { listeners.resize(); jest.advanceTimersByTime(150); });
     expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('resets on confirmed keyboard close (full height) even if the field stays focused, preserving main scroll', () => {
+    const { vv, listeners } = mockVV(window.innerHeight);
+    const main = document.createElement('main');
+    document.body.appendChild(main);
+    main.scrollTop = 250;
+    const { input } = mount();
+    input.focus();
+    setScrollY(300);
+
+    vv.height = 400; // keyboard opens
+    act(() => { listeners.resize(); jest.advanceTimersByTime(150); });
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    vv.height = window.innerHeight - 1; // restored (1px tolerance)
+    act(() => { listeners.resize(); jest.advanceTimersByTime(150); });
+    expect(document.activeElement).toBe(input);
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(main.scrollTop).toBe(250);
   });
 
   it('removes listeners and pending timers on unmount', () => {

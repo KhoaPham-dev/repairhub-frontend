@@ -15,8 +15,8 @@ function isEditable(el: Element | null): boolean {
   return ce !== null && ce !== undefined && ce !== 'false';
 }
 
-function resetWindowScroll() {
-  if (isEditable(document.activeElement)) return;
+function resetWindowScroll(force: boolean) {
+  if (!force && isEditable(document.activeElement)) return;
   const offset = window.scrollY || document.documentElement.scrollTop;
   if (offset !== 0) window.scrollTo(0, 0);
 }
@@ -27,15 +27,20 @@ function resetWindowScroll() {
 export default function KeyboardScrollReset() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const schedule = () => {
+    let pendingForce = false;
+    const schedule = (force = false) => {
       if (timer) clearTimeout(timer);
+      pendingForce = pendingForce || force;
       timer = setTimeout(() => {
         timer = undefined;
-        resetWindowScroll();
+        const f = pendingForce;
+        pendingForce = false;
+        resetWindowScroll(f);
       }, 100);
     };
+    const onFocusOut = () => schedule();
 
-    document.addEventListener('focusout', schedule, true);
+    document.addEventListener('focusout', onFocusOut, true);
 
     const vv = window.visualViewport;
     let lastHeight = vv?.height ?? 0;
@@ -43,14 +48,18 @@ export default function KeyboardScrollReset() {
       if (!vv) return;
       const grew = vv.height > lastHeight;
       lastHeight = vv.height;
-      if (grew) schedule();
+      // Confirmed keyboard close: viewport is back to full height (1px
+      // tolerance for iOS rounding). Reset even if a field still has focus.
+      // Partial growth (e.g. QuickType bar) keeps the focus guard.
+      if (grew) schedule(vv.height >= window.innerHeight - 1);
     };
     vv?.addEventListener('resize', onResize);
 
     return () => {
-      document.removeEventListener('focusout', schedule, true);
+      document.removeEventListener('focusout', onFocusOut, true);
       vv?.removeEventListener('resize', onResize);
       if (timer) clearTimeout(timer);
+      pendingForce = false;
     };
   }, []);
 
