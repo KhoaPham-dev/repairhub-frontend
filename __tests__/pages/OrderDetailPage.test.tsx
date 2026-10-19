@@ -153,6 +153,24 @@ describe('OrderDetailPage', () => {
     });
   });
 
+  it('shows Khách lẻ for a RETAIL customer', async () => {
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Loại khách:')).toBeInTheDocument();
+      expect(screen.getByText('Khách lẻ')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Đối tác')).not.toBeInTheDocument();
+  });
+
+  it('shows Đối tác for a PARTNER customer', async () => {
+    mockGet.mockResolvedValue({ data: { ...MOCK_ORDER, customer_type: 'PARTNER' } });
+    render(<OrderDetailPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Đối tác')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Khách lẻ')).not.toBeInTheDocument();
+  });
+
   it('shows status update section for non-terminal orders', async () => {
     render(<OrderDetailPage />);
     await waitFor(() => {
