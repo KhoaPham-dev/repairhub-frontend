@@ -256,6 +256,7 @@ export default function OrderDetailPage() {
             </div>
             <div className="space-y-1 text-sm">
               <p><span className="text-text-muted">Khách:</span> <span className="font-medium text-text-base">{order.customer_name}</span></p>
+              <p><span className="text-text-muted">Loại khách:</span> <span className="text-text-base">{order.customer_type === 'PARTNER' ? 'Đối tác' : 'Khách lẻ'}</span></p>
               <p><span className="text-text-muted">SĐT:</span> {/^[0-9+() \-]+$/.test(order.customer_phone) ? <a href={`tel:${order.customer_phone}`} className="text-accent underline">{order.customer_phone}</a> : <span className="text-text-base">{order.customer_phone}</span>}</p>
               <p><span className="text-text-muted">Chi nhánh:</span> <span className="text-text-base">{order.branch_name}</span></p>
               <p><span className="text-text-muted">Thiết bị:</span> <span className="text-text-base">{order.device_name}</span></p>
